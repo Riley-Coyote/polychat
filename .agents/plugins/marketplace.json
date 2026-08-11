@@ -1,0 +1,12 @@
+{
+  "name": "polychat",
+  "interface": { "displayName": "Polychat" },
+  "plugins": [
+    {
+      "name": "polychat",
+      "source": { "source": "local", "path": "./plugins/polychat" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Developer Tools"
+    }
+  ]
+}

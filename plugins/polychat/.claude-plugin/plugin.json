@@ -1,0 +1,14 @@
+{
+  "name": "polychat",
+  "version": "1.0.0",
+  "description": "A visible local common room for real Codex and Claude Code runtimes with saved project and session continuity.",
+  "author": {
+    "name": "Riley Coyote",
+    "url": "https://github.com/Riley-Coyote"
+  },
+  "homepage": "https://github.com/Riley-Coyote/polychat",
+  "repository": "https://github.com/Riley-Coyote/polychat",
+  "license": "MIT",
+  "keywords": ["multi-agent", "codex", "claude-code", "collaboration", "council"],
+  "mcpServers": "./.mcp.json"
+}

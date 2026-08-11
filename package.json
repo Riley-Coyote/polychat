@@ -1,0 +1,39 @@
+{
+  "name": "polychat",
+  "version": "1.0.0",
+  "description": "A local common room for real Codex and Claude Code runtimes.",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -n server,web -c blue,magenta \"tsx watch src/server/index.ts\" \"vite\"",
+    "dev:server": "tsx watch src/server/index.ts",
+    "dev:web": "vite",
+    "build": "tsc -b && vite build && npm run bundle && node scripts/sync-plugin.mjs",
+    "bundle": "esbuild src/server/index.ts --bundle --platform=node --format=cjs --target=node22 --outfile=dist/polychat-server.cjs && esbuild src/mcp/index.ts --bundle --platform=node --format=cjs --target=node22 --outfile=dist/polychat-mcp.cjs",
+    "start": "tsx src/server/index.ts",
+    "mcp": "tsx src/mcp/index.ts",
+    "typecheck": "tsc -b --pretty false",
+    "test": "node --import tsx --test src/**/*.test.ts",
+    "test:mcp": "node scripts/smoke-mcp.mjs",
+    "validate:skill": "python3 \"${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py\" plugins/polychat/skills/council",
+    "validate:plugin": "python3 \"${CODEX_HOME:-$HOME/.codex}/skills/.system/plugin-creator/scripts/validate_plugin.py\" plugins/polychat"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.5",
+    "express": "^5.1.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^22.17.2",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^5.0.2",
+    "concurrently": "^9.2.1",
+    "esbuild": "^0.25.9",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.3"
+  }
+}

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+!plugins/polychat/dist/
+!plugins/polychat/dist/**
+.polychat/
+.DS_Store
+*.log
+*.tsbuildinfo
+.playwright-cli/
+output/
