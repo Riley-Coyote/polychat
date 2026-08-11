@@ -24794,13 +24794,20 @@ function sendMessage(roomId, body) {
   if (!content) throw new Error("Message content is required.");
   const sender = senderInRoom(roomId, senderId);
   if (!sender) throw new Error(`Unknown sender in this room: ${senderId}`);
+  const room = getRoom(roomId);
+  const meetingInput = sender.runtime === "human" && room?.meetingStatus === "live";
+  const stopRequested = meetingInput && /^\s*(?:stop|cancel|end)(?:\s+(?:the\s+)?(?:council|meeting|discussion))?[.!]?\s*$/i.test(content);
   const requested = Array.isArray(body.recipientAgentIds) ? body.recipientAgentIds.map(String) : sender.runtime === "human" ? listAgents(roomId).filter((agent) => agent.runtime !== "human" && agent.status !== "away").map((agent) => agent.id) : [];
   const recipientIds = [...new Set(requested)].filter((id) => id !== senderId);
-  const message = createMessage({ roomId, senderId, content, metadata: { audience: body.audience === "direct" ? "direct" : "room", recipientAgentIds: recipientIds } });
+  const message = createMessage({ roomId, senderId, content, metadata: { audience: body.audience === "direct" ? "direct" : "room", recipientAgentIds: recipientIds, queuedForMeeting: meetingInput && !stopRequested, stopRequested } });
   publish(roomId, { type: "message.created", message });
   const dispatchedAgentIds = [];
   const dispatchErrors = [];
-  const runnable = recipientIds.map(getAgent).filter((agent) => agent && agent.runtime !== "human" && agent.status !== "away");
+  if (stopRequested && room) {
+    const stoppedRoom = updateRoom(roomId, { meetingStatus: "cancelled" });
+    publish(roomId, { type: "room.updated", room: stoppedRoom });
+  }
+  const runnable = meetingInput ? [] : recipientIds.map(getAgent).filter((agent) => agent && agent.runtime !== "human" && agent.status !== "away");
   if (body.discussion === true && runnable.length) {
     dispatchedAgentIds.push(...runnable.map((agent) => agent.id));
     void runDiscussion(roomId, runnable.map((agent) => agent.id), content, sender.name, requestedTurns(content, runnable.length)).catch((error) => console.error("Polychat council failed:", error));
@@ -24814,7 +24821,7 @@ function sendMessage(roomId, body) {
       }
     }
   }
-  return { ...message, dispatchedAgentIds, dispatchErrors };
+  return { ...message, dispatchedAgentIds, dispatchErrors, queuedForMeeting: meetingInput && !stopRequested, stopRequested };
 }
 app.get("/api/health", (_request, response) => response.json({ ok: true, service: "polychat", version: "1.0.0", dataDir }));
 app.get("/api/rooms", (request, response) => response.json({ rooms: listRooms(request.query.archived === "true") }));
