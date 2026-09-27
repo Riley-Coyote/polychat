@@ -5,13 +5,13 @@
     {
       "name": "polychat",
       "source": "./plugins/polychat",
-      "description": "A visible local common room for real Codex and Claude Code runtimes.",
-      "version": "1.0.0",
+      "description": "A visible local common room for real Codex, Claude Code, Grok Build, and Kimi Code runtimes.",
+      "version": "1.1.0",
       "author": { "name": "Riley Coyote", "url": "https://github.com/Riley-Coyote" },
       "homepage": "https://github.com/Riley-Coyote/polychat",
       "repository": "https://github.com/Riley-Coyote/polychat",
       "license": "MIT",
-      "keywords": ["multi-agent", "codex", "claude-code", "council"]
+      "keywords": ["multi-agent", "codex", "claude-code", "grok", "kimi-code", "council"]
     }
   ]
 }

@@ -1,7 +1,7 @@
 {
   "name": "polychat",
-  "version": "1.0.0",
-  "description": "A local common room for real Codex and Claude Code runtimes.",
+  "version": "1.1.0",
+  "description": "A local common room for real Codex, Claude Code, Grok Build, and Kimi Code runtimes.",
   "type": "module",
   "scripts": {
     "dev": "concurrently -k -n server,web -c blue,magenta \"tsx watch src/server/index.ts\" \"vite\"",
@@ -12,9 +12,9 @@
     "start": "tsx src/server/index.ts",
     "mcp": "tsx src/mcp/index.ts",
     "typecheck": "tsc -b --pretty false",
-    "test": "node --import tsx --test src/**/*.test.ts",
+    "test": "node --import tsx --test src/server/*.test.ts src/server/runtimes/*.test.ts",
     "test:mcp": "node scripts/smoke-mcp.mjs",
-    "validate:skill": "python3 \"${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py\" plugins/polychat/skills/council",
+    "validate:skill": "python3 \"${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py\" plugins/polychat/skills/council && python3 \"${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py\" plugins/polychat/skills/stage-polychat-demo",
     "validate:plugin": "python3 \"${CODEX_HOME:-$HOME/.codex}/skills/.system/plugin-creator/scripts/validate_plugin.py\" plugins/polychat"
   },
   "dependencies": {

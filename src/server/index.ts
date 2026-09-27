@@ -6,13 +6,17 @@ import { createAgent, createMessage, createRoom, dataDir, getAgent, getRoom, lis
 import { currentCursor, publish, subscribe } from "./events.js";
 import { cancelAgents, invokeAgent } from "./runtime.js";
 import { listClaudeProjects, listClaudeSessions } from "./claudeContexts.js";
-import { listCodexProjects, listCodexSessions } from "./codexContexts.js";
+import { isRuntimeId, getRuntimeAdapter, rankProjects, runtimeCatalog, runtimeIds } from "./runtimes/registry.js";
+import { findGrokSessionCwd } from "./grokContexts.js";
+import { findKimiSessionCwd } from "./kimiContexts.js";
 
 const app = express();
 const preferredPort = Number(process.env.POLYCHAT_PORT ?? 4317);
 const host = "127.0.0.1";
 
 app.use(express.json({ limit: "1mb" }));
+// Room documents and API responses are live state, never reusable port-cache entries.
+app.use((_request, response, next) => { response.setHeader("Cache-Control", "no-store"); next(); });
 
 function roomState(roomId: string) {
   let room = getRoom(roomId);
@@ -43,7 +47,8 @@ async function runDiscussion(roomId: string, agentIds: string[], content: string
     const agent = getAgent(agentIds[index % agentIds.length]);
     if (!agent || agent.runtime === "human") continue;
     const prompt = index === 0 ? content : `Continue the council. Contribution ${index + 1} of ${turnCount}. Respond directly to ${previousSpeaker}'s latest ideas, challenge or extend something substantive, and move toward a useful conclusion. Original agenda:\n\n${content}`;
-    const completed = await invokeAgent(roomId, agent, prompt, previousSpeaker).completion;
+    const remaining = room.hostExpiresAt ? Math.max(1_000, Date.parse(room.hostExpiresAt) - Date.now()) : 20 * 60_000;
+    const completed = await invokeAgent(roomId, agent, prompt, previousSpeaker, Math.min(5 * 60_000, remaining)).completion;
     previousSpeaker = completed.senderName;
   }
 }
@@ -71,6 +76,7 @@ function sendMessage(roomId: string, body: Record<string, unknown>) {
   if (stopRequested && room) {
     const stoppedRoom = updateRoom(roomId, { meetingStatus: "cancelled" });
     publish(roomId, { type: "room.updated", room: stoppedRoom });
+    cancelAgents(listAgents(roomId).map((agent) => agent.id));
   }
   const runnable = meetingInput ? [] : recipientIds.map(getAgent).filter((agent) => agent && agent.runtime !== "human" && agent.status !== "away");
   if (body.discussion === true && runnable.length) {
@@ -85,7 +91,8 @@ function sendMessage(roomId: string, body: Record<string, unknown>) {
   return { ...message, dispatchedAgentIds, dispatchErrors, queuedForMeeting: meetingInput && !stopRequested, stopRequested };
 }
 
-app.get("/api/health", (_request, response) => response.json({ ok: true, service: "polychat", version: "1.0.0", dataDir }));
+app.get("/api/health", (_request, response) => response.json({ ok: true, service: "polychat", version: "1.1.0", dataDir, registry: { ready: true, runtimes: runtimeIds } }));
+app.get("/api/runtimes", async (request, response) => { try { response.json({ runtimes: await runtimeCatalog(request.query.refresh === "true") }); } catch (error) { response.status(500).json({ error: error instanceof Error ? error.message : String(error) }); } });
 app.get("/api/rooms", (request, response) => response.json({ rooms: listRooms(request.query.archived === "true") }));
 app.post("/api/rooms", (request, response) => { try { const name = String(request.body?.name ?? "New council").trim().slice(0, 80) || "New council"; response.status(201).json(createRoom({ name, projectCwd: typeof request.body?.projectCwd === "string" ? request.body.projectCwd : null })); } catch (error) { response.status(400).json({ error: String(error) }); } });
 app.get("/api/rooms/:roomId", (request, response) => { const state = roomState(request.params.roomId); state ? response.json(state) : response.status(404).json({ error: "Room not found." }); });
@@ -98,23 +105,27 @@ app.post("/api/rooms/:roomId/participants", (request, response) => {
   try {
     const runtime = request.body?.runtime;
     if (!getRoom(request.params.roomId)) return response.status(404).json({ error: "Room not found." });
-    if (runtime !== "human" && runtime !== "claude-code" && runtime !== "codex") return response.status(400).json({ error: "Choose Claude Code or Codex." });
+    if (runtime !== "human" && !isRuntimeId(runtime)) return response.status(400).json({ error: "Unknown runtime." });
     const name = String(request.body?.name ?? "").trim(); if (!name || name.length > 48) return response.status(400).json({ error: "Choose a name under 48 characters." });
     const cwd = request.body?.cwd === null ? null : String(request.body?.cwd ?? process.cwd()).trim();
     if (cwd && (!existsSync(cwd) || !statSync(cwd).isDirectory())) return response.status(400).json({ error: "The working folder does not exist." });
-    const agent = createAgent({ roomId: request.params.roomId, runtime, name, model: runtime === "human" ? null : String(request.body?.model || (runtime === "claude-code" ? "opus" : "current")), cwd, sessionId: typeof request.body?.sessionId === "string" ? request.body.sessionId : null, status: request.body?.status === "away" ? "away" : "available" });
+    const sessionId = typeof request.body?.sessionId === "string" ? request.body.sessionId : null;
+    const sessionCwd = sessionId && runtime === "grok" ? findGrokSessionCwd(sessionId) : sessionId && runtime === "kimi-code" ? findKimiSessionCwd(sessionId) : null;
+    if (cwd && sessionCwd && resolve(cwd) !== resolve(sessionCwd)) return response.status(409).json({ error: "The selected session belongs to a different project directory.", code: "session_mismatch", runtime });
+    const fallbackModel = runtime === "claude-code" ? "opus" : "current";
+    const agent = createAgent({ roomId: request.params.roomId, runtime, name, model: runtime === "human" ? null : String(request.body?.model || fallbackModel), cwd, sessionId, status: request.body?.status === "away" ? "away" : "available" });
     publish(request.params.roomId, { type: "agent.updated", agent }); response.status(201).json(agent);
   } catch (error) { response.status(400).json({ error: error instanceof Error ? error.message : String(error) }); }
 });
-app.patch("/api/rooms/:roomId/participants/:agentId", (request, response) => { try { if (!senderInRoom(request.params.roomId, request.params.agentId)) return response.status(404).json({ error: "Participant not found." }); const patch = { ...(typeof request.body?.name === "string" ? { name: request.body.name } : {}), ...(typeof request.body?.model === "string" ? { model: request.body.model } : {}), ...(typeof request.body?.cwd === "string" ? { cwd: request.body.cwd } : {}), ...(request.body?.sessionId === null || typeof request.body?.sessionId === "string" ? { sessionId: request.body.sessionId } : {}), ...(typeof request.body?.status === "string" ? { status: request.body.status } : {}) }; const agent = updateAgent(request.params.agentId, patch); publish(request.params.roomId, { type: "agent.updated", agent }); response.json(agent); } catch (error) { response.status(400).json({ error: error instanceof Error ? error.message : String(error) }); } });
+app.patch("/api/rooms/:roomId/participants/:agentId", (request, response) => { try { const current = senderInRoom(request.params.roomId, request.params.agentId); if (!current) return response.status(404).json({ error: "Participant not found." }); const cwd = typeof request.body?.cwd === "string" ? request.body.cwd : current.cwd; const sessionId = request.body?.sessionId === null || typeof request.body?.sessionId === "string" ? request.body.sessionId : current.sessionId; const sessionCwd = sessionId && current.runtime === "grok" ? findGrokSessionCwd(sessionId) : sessionId && current.runtime === "kimi-code" ? findKimiSessionCwd(sessionId) : null; if (cwd && sessionCwd && resolve(cwd) !== resolve(sessionCwd)) return response.status(409).json({ error: "The selected session belongs to a different project directory.", code: "session_mismatch", runtime: current.runtime }); const patch = { ...(typeof request.body?.name === "string" ? { name: request.body.name } : {}), ...(typeof request.body?.model === "string" ? { model: request.body.model } : {}), ...(typeof request.body?.cwd === "string" ? { cwd: request.body.cwd } : {}), ...(request.body?.sessionId === null || typeof request.body?.sessionId === "string" ? { sessionId: request.body.sessionId } : {}), ...(typeof request.body?.status === "string" ? { status: request.body.status } : {}) }; const agent = updateAgent(request.params.agentId, patch); publish(request.params.roomId, { type: "agent.updated", agent }); response.json(agent); } catch (error) { response.status(400).json({ error: error instanceof Error ? error.message : String(error) }); } });
 app.delete("/api/rooms/:roomId/participants/:agentId", (request, response) => { const agent = senderInRoom(request.params.roomId, request.params.agentId); if (!agent) return response.status(404).json({ error: "Participant not found." }); if (agent.runtime === "human") return response.status(400).json({ error: "A human participant cannot be removed." }); if (agent.status === "thinking") return response.status(409).json({ error: `${agent.name} is still responding.` }); removeAgentFromRoom(agent.id, request.params.roomId); publish(request.params.roomId, { type: "agent.removed", agentId: agent.id }); response.status(204).end(); });
 app.post("/api/rooms/:roomId/invoke", (request, response) => { const agent = getAgent(String(request.body?.agentId ?? "")); const sender = senderInRoom(request.params.roomId, String(request.body?.senderId ?? "riley")); const prompt = String(request.body?.prompt ?? "").trim(); if (!agent || !sender || !prompt) return response.status(400).json({ error: "A room participant, sender, and prompt are required." }); try { const invocation = invokeAgent(request.params.roomId, agent, prompt, sender.name); response.status(202).json({ message: invocation.placeholder, eventCursor: currentCursor() }); } catch (error) { response.status(409).json({ error: error instanceof Error ? error.message : String(error) }); } });
 
 app.post("/api/rooms/:roomId/meeting", (request, response) => { try { const roomId = request.params.roomId; const host = createAgent({ roomId, runtime: request.body?.hostRuntime === "claude-code" ? "claude-code" : "codex", name: String(request.body?.hostName ?? (request.body?.hostRuntime === "claude-code" ? "Claude host" : "Codex host")), model: String(request.body?.hostModel ?? "current"), cwd: String(request.body?.cwd ?? process.cwd()), status: "available" }); const expiresAt = new Date(Date.now() + Math.min(Math.max(Number(request.body?.minutes ?? 20), 1), 20) * 60_000).toISOString(); const room = updateRoom(roomId, { meetingStatus: "live", hostAgentId: host.id, hostExpiresAt: expiresAt }); publish(roomId, { type: "agent.updated", agent: host }); publish(roomId, { type: "room.updated", room }); response.status(201).json({ room, host, eventCursor: currentCursor() }); } catch (error) { response.status(400).json({ error: error instanceof Error ? error.message : String(error) }); } });
 app.delete("/api/rooms/:roomId/meeting", (request, response) => { try { const room = getRoom(request.params.roomId); if (!room) return response.status(404).json({ error: "Room not found." }); cancelAgents(listAgents(room.id).map((agent) => agent.id)); if (room.hostAgentId) { const hostAgent = updateAgent(room.hostAgentId, { status: "away" }); publish(room.id, { type: "agent.updated", agent: hostAgent }); } const next = updateRoom(room.id, { meetingStatus: request.query.cancel === "true" ? "cancelled" : "complete", hostExpiresAt: null }); publish(room.id, { type: "room.updated", room: next }); response.json(next); } catch (error) { response.status(400).json({ error: String(error) }); } });
 
-app.get("/api/contexts/:runtime/projects", (request, response) => { try { const query = typeof request.query.q === "string" ? request.query.q : ""; const projects = request.params.runtime === "codex" ? listCodexProjects(query) : listClaudeProjects(query).map((project) => ({ ...project, runtime: "claude-code" })); response.json({ projects }); } catch (error) { response.status(500).json({ error: String(error) }); } });
-app.get("/api/contexts/:runtime/projects/:projectId/sessions", (request, response) => { try { const limit = Math.min(Math.max(Number(request.query.limit ?? 32), 1), 80); response.json({ sessions: request.params.runtime === "codex" ? listCodexSessions(request.params.projectId, limit) : listClaudeSessions(request.params.projectId, limit) }); } catch (error) { response.status(500).json({ error: String(error) }); } });
+app.get("/api/contexts/:runtime/projects", async (request, response) => { try { if (!isRuntimeId(request.params.runtime)) return response.status(400).json({ error: "Unknown runtime." }); const query = typeof request.query.q === "string" ? request.query.q : ""; response.json({ projects: rankProjects(await getRuntimeAdapter(request.params.runtime).searchProjects(query, 80), query) }); } catch (error) { response.status(500).json({ error: String(error) }); } });
+app.get("/api/contexts/:runtime/projects/:projectId/sessions", async (request, response) => { try { if (!isRuntimeId(request.params.runtime)) return response.status(400).json({ error: "Unknown runtime." }); const limit = Math.min(Math.max(Number(request.query.limit ?? 32), 1), 80); response.json({ sessions: await getRuntimeAdapter(request.params.runtime).listSessions(request.params.projectId, limit) }); } catch (error) { response.status(500).json({ error: String(error) }); } });
 
 // v0 compatibility wrappers
 app.get("/api/room", (_request, response) => response.json(roomState("common-room")));

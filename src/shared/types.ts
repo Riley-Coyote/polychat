@@ -1,7 +1,64 @@
-export type Runtime = "human" | "claude-code" | "codex";
+export type RuntimeId = "claude-code" | "codex" | "grok" | "kimi-code";
+export type Runtime = "human" | RuntimeId;
 export type MessageStatus = "complete" | "streaming" | "error";
 export type ParticipantStatus = "available" | "thinking" | "offline" | "away";
 export type MeetingStatus = "idle" | "live" | "complete" | "cancelled";
+export type RuntimeProbeStatus = "available" | "missing" | "unsupported" | "unauthenticated" | "ready" | "error";
+export type RuntimeErrorCode = "runtime_missing" | "runtime_unsupported" | "runtime_unauthenticated" | "model_unavailable" | "session_not_found" | "session_mismatch" | "permission_denied" | "invocation_busy" | "invocation_timeout" | "invocation_cancelled" | "protocol_error" | "process_failed";
+
+export interface ModelOption {
+  id: string;
+  label: string;
+  detail: string;
+  name: string;
+}
+
+export interface RuntimeCapabilities {
+  exactResume: boolean;
+  modelDiscovery: boolean;
+  arbitraryModels: boolean;
+  projectDiscovery: boolean;
+  transport: "jsonl" | "acp";
+  safety: string;
+}
+
+export interface RuntimeDescriptor {
+  id: RuntimeId;
+  displayName: string;
+  lab: string;
+  minimumVersion: string | null;
+  setupCommand: string;
+  loginCommand: string;
+  updateCommand: string;
+  capabilities: RuntimeCapabilities;
+  presets: ModelOption[];
+}
+
+export interface RuntimeProbe {
+  runtime: RuntimeId;
+  status: RuntimeProbeStatus;
+  installed: boolean;
+  authenticated: boolean;
+  supported: boolean;
+  version: string | null;
+  executable: string | null;
+  message: string;
+  action: string | null;
+}
+
+export interface RuntimeCatalogEntry {
+  descriptor: RuntimeDescriptor;
+  probe: RuntimeProbe;
+  models: ModelOption[];
+}
+
+export interface StructuredRuntimeError {
+  code: RuntimeErrorCode;
+  runtime: RuntimeId;
+  message: string;
+  retryable: boolean;
+  action?: string;
+}
 
 export interface Room {
   id: string;
@@ -88,6 +145,7 @@ export type RoomEventPayload =
   | { type: "message.created"; message: ChatMessage }
   | { type: "message.updated"; message: ChatMessage }
   | { type: "agent.updated"; agent: Agent }
-  | { type: "agent.removed"; agentId: string };
+  | { type: "agent.removed"; agentId: string }
+  | { type: "runtime.updated"; runtime: RuntimeCatalogEntry };
 
 export type RoomEvent = RoomEventPayload & { eventId: number; roomId: string };

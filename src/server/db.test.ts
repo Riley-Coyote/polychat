@@ -31,4 +31,11 @@ test("meeting and archive state persist on a room", () => {
   assert.equal(db.listRooms(true).some((candidate: Room) => candidate.id === room.id), true);
 });
 
+test("rooms persist Grok and Kimi participant bindings", () => {
+  const room = db.createRoom({ name: "Mixed" });
+  const grok = db.createAgent({ roomId: room.id, name: "Grok", runtime: "grok", model: "grok-code-fast-1", cwd: "/tmp", sessionId: "grok-session" });
+  const kimi = db.createAgent({ roomId: room.id, name: "Kimi", runtime: "kimi-code", model: "kimi-for-coding", cwd: "/tmp", sessionId: "kimi-session" });
+  assert.deepEqual(db.listAgents(room.id).filter((agent: Agent) => agent.runtime !== "human").map((agent: Agent) => [agent.runtime, agent.sessionId]).sort(), [["grok", "grok-session"], ["kimi-code", "kimi-session"]].sort());
+});
+
 test.after(() => rmSync(testDir, { recursive: true, force: true }));

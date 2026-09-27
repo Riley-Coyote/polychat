@@ -1,6 +1,6 @@
 ---
 name: council
-description: Convene a visible, saved collaboration room using the user's real Codex CLI and Claude Code runtimes. Use when the user invokes council, asks Codex and Claude to discuss or brainstorm together, wants another model's project or exact session context, or wants to resume a prior Polychat room.
+description: Convene a visible, saved collaboration room using real Codex, Claude Code, Grok Build, and Kimi Code runtimes. Use when the user invokes council, asks installed coding agents to discuss or brainstorm together, wants a model's project or exact session context, or wants to resume a prior Polychat room.
 ---
 
 # Council
@@ -9,7 +9,7 @@ Use Polychat as connective tissue between real runtime contexts. Keep the browse
 
 ## Start or resume
 
-1. Run `polychat_doctor`. Stop with the actionable failed check if the environment is not ready.
+1. Resolve runtime names first: Grok or Grok Build means `grok`; Kimi or Kimi Code means `kimi-code`; Claude means `claude-code`; Codex means `codex`. Run `polychat_doctor` with every explicitly requested runtime in `requiredRuntimes`. Stop with its actionable failed check if a requested peer is not ready. Never silently substitute another runtime.
 2. If the user explicitly identifies a saved room, use `list_rooms` and `read_room`. Otherwise create a new room named from the agenda with `create_room`.
 3. Infer the invoking host from the current runtime. Register it with `start_meeting`, using the current working directory and a 20-minute maximum.
 4. Resolve invited peers:
@@ -19,13 +19,14 @@ Use Polychat as connective tissue between real runtime contexts. Keep the browse
    - Use the current working directory for a new peer when no prior context was requested.
    - Ask the user to choose when multiple context results plausibly match. Never silently resume an ambiguous session.
    - Default to one Opus Claude Code peer when Codex hosts, or one configured Codex peer when Claude hosts.
+   - Grok Build and Kimi Code are broker-managed peers only. They cannot become the live host.
 5. Add peers with `configure_participant`. A participant is only a runtime, model, project directory, optional exact session, and display name.
 6. Call `open_room`. In Codex, prefer navigating the returned local URL with the in-app Browser tool when it is available; otherwise rely on the macOS browser opened by the tool.
 
 ## Conduct the council
 
 1. Post the agenda visibly as the live host with `send_message` and no recipients.
-2. Run two rounds by default. In each round, call `invoke_participant` once for each peer, sequentially.
+2. Run two rounds by default. In each round, call `invoke_participant` once for each peer, sequentially, including mixed Claude, Codex, Grok, and Kimi rooms.
 3. After each invocation, call `wait_for_events` and then `read_room`. Incorporate new browser messages before the next contribution.
 4. Between rounds, reason as the active host and post a concise visible response that connects, challenges, or redirects the discussion.
 5. Honor an explicit number of turns or rounds, but never exceed 12 peer contributions or 20 minutes.

@@ -1,6 +1,6 @@
 # Polychat
 
-Polychat is a local common room for you, Codex, Claude Code, and additional real runtime sessions. It does not replace those runtimes with API model impersonations. Every participant keeps its own project instructions, tools, memory, and resumable session while sharing one visible transcript.
+Polychat is a local common room for you and real Codex, Claude Code, Grok Build, and Kimi Code sessions. It does not replace those runtimes with API model impersonations. Every participant keeps its own project instructions, tools, memory, and resumable session while sharing one visible transcript.
 
 ![A Polychat room showing real Codex and Claude Code participants with resumed continuity](docs/assets/polychat-room.png)
 
@@ -12,7 +12,7 @@ Polychat is a local common room for you, Codex, Claude Code, and additional real
 
 ## Install
 
-Polychat v1 supports macOS and requires Node.js 22+, Codex CLI, and Claude Code. Sign in to Codex and Claude Code normally; Polychat never stores provider credentials.
+Polychat v1.1 supports macOS and requires Node.js 22+ plus Codex or Claude Code as the host. Grok Build 0.2.114+ and Kimi Code 0.27.0+ are optional peers. Sign in with each CLI normally; Polychat never stores provider credentials.
 
 ### Codex
 
@@ -48,11 +48,11 @@ If a project or session name is ambiguous, the host asks instead of silently cho
 
 Rooms support:
 
-- Multiple Claude Code and Codex participants with different models.
-- Searchable Claude and Codex project/session history.
+- Multiple Claude Code, Codex, Grok Build, and Kimi Code participants with different models.
+- Searchable project and exact-session history for all four runtimes.
 - Direct messages or room-wide messages.
 - Saved transcripts and participant context bindings.
-- Read/plan-oriented runtime execution for ideation.
+- Read/plan-oriented runtime execution for ideation. Grok uses its read-only sandbox; Kimi is additionally wrapped in macOS Seatbelt.
 - Automatic broker startup and crash recovery.
 
 ## Privacy and storage
@@ -92,6 +92,7 @@ The preferred room URL is [http://127.0.0.1:4317](http://127.0.0.1:4317). If tha
 The plugin exposes:
 
 - `polychat_doctor`
+- `list_runtimes`
 - `list_rooms`
 - `create_room`
 - `open_room`
@@ -112,6 +113,7 @@ The v0 tools remain as compatibility aliases for one release.
 - Run `polychat_doctor` from the installed MCP server to see exact runtime and storage checks.
 - Run `claude doctor` to diagnose Claude Code authentication or installation.
 - Run `codex --version` and `claude --version` to confirm both CLIs are visible to plugin processes.
+- Run `grok login` or `kimi login` when an optional installed peer appears unauthenticated. Use `grok update` or `kimi upgrade` when it is below the supported minimum.
 - Broker logs are at `~/Library/Application Support/Polychat/broker.log`.
 - Polychat keeps runtime errors visible in the transcript instead of silently dropping a reply.
 

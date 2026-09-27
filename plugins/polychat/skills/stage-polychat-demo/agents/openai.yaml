@@ -1,0 +1,5 @@
+interface:
+  display_name: "Stage Polychat Demo"
+  short_description: "Direct a realistic browser-visible council demo"
+  default_prompt: "Use $stage-polychat-demo to prepare and rehearse a guided Polychat recording for this project."
+

@@ -1,11 +1,13 @@
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import type { Agent, ChatMessage } from "../shared/types.js";
-import { createMessage, listMessages, updateAgent, updateMessage } from "./db.js";
+import type { Agent, ChatMessage, StructuredRuntimeError } from "../shared/types.js";
+import { createMessage, listAgents, listMessages, updateAgent, updateMessage } from "./db.js";
 import { publish } from "./events.js";
+import { PolychatRuntimeError, type RunningInvocation } from "./runtimes/contracts.js";
+import { getRuntimeAdapter, isRuntimeId } from "./runtimes/registry.js";
 
 const activeRuns = new Map<string, Promise<ChatMessage>>();
-const activeChildren = new Map<string, ChildProcessWithoutNullStreams>();
+const activeInvocations = new Map<string, RunningInvocation>();
+const activeSessions = new Set<string>();
+const turnTimeoutMs = Number(process.env.POLYCHAT_TURN_TIMEOUT_MS ?? 30 * 60 * 1000);
 
 function roomPrompt(roomId: string, agent: Agent, directPrompt: string, senderName: string) {
   const visibleMessages = listMessages(roomId, 60).filter((message) => message.status !== "streaming");
@@ -30,80 +32,55 @@ ${directPrompt}
 Reply to the room as ${agent.name}.`;
 }
 
-function append(roomId: string, messageId: string, content: string) {
-  const message = updateMessage(messageId, { content, status: "streaming" });
-  publish(roomId, { type: "message.updated", message });
+function runtimeFailure(agent: Agent, error: unknown): StructuredRuntimeError {
+  if (error instanceof PolychatRuntimeError) return error.detail;
+  return { code: "process_failed", runtime: isRuntimeId(agent.runtime) ? agent.runtime : "codex", message: error instanceof Error ? error.message : String(error), retryable: true };
 }
 
-function complete(roomId: string, messageId: string, content: string, metadata: Record<string, unknown>) {
-  const message = updateMessage(messageId, { content: content.trim(), status: "complete", metadata });
-  publish(roomId, { type: "message.updated", message });
-  return message;
-}
-
-function fail(roomId: string, messageId: string, error: unknown) {
-  const detail = error instanceof Error ? error.message : String(error);
-  const message = updateMessage(messageId, { content: `Runtime error: ${detail}`, status: "error", metadata: { error: detail } });
-  publish(roomId, { type: "message.updated", message });
-  return message;
-}
-
-async function runClaude(roomId: string, agent: Agent, prompt: string, messageId: string): Promise<ChatMessage> {
-  const sessionId = agent.sessionId ?? randomUUID();
-  if (!agent.sessionId) updateAgent(agent.id, { sessionId });
-  const args = ["-p", prompt, "--output-format", "stream-json", "--verbose", "--include-partial-messages", "--model", agent.model ?? "opus", "--permission-mode", "plan"];
-  if (agent.sessionId) args.push("--resume", agent.sessionId); else args.push("--session-id", sessionId);
-  return new Promise((resolve) => {
-    const child = spawn("claude", args, { cwd: agent.cwd ?? process.cwd(), env: process.env, stdio: ["pipe", "pipe", "pipe"] });
-    child.stdin.end();
-    activeChildren.set(agent.id, child);
-    let buffer = ""; let stderr = ""; let text = ""; let resultText = "";
-    const line = (raw: string) => {
-      if (!raw.trim()) return;
-      try {
-        const event = JSON.parse(raw) as Record<string, any>;
-        if (event.type === "stream_event" && event.event?.delta?.type === "text_delta") { text += event.event.delta.text; append(roomId, messageId, text); }
-        if (event.type === "assistant" && !text && Array.isArray(event.message?.content)) { text = event.message.content.filter((block: any) => block.type === "text").map((block: any) => block.text).join(""); if (text) append(roomId, messageId, text); }
-        if (event.type === "result" && typeof event.result === "string") resultText = event.result;
-      } catch { /* Ignore non-JSON runtime output. */ }
-    };
-    child.stdout.on("data", (chunk: Buffer) => { buffer += chunk; const lines = buffer.split("\n"); buffer = lines.pop() ?? ""; lines.forEach(line); });
-    child.stderr.on("data", (chunk: Buffer) => { stderr += chunk; });
-    child.on("error", (error) => resolve(fail(roomId, messageId, error)));
-    child.on("close", (code) => { if (buffer) line(buffer); activeChildren.delete(agent.id); code === 0 && (text || resultText) ? resolve(complete(roomId, messageId, text || resultText, { runtime: "claude-code", sessionId })) : resolve(fail(roomId, messageId, stderr.trim() || `Claude Code exited with code ${code}`)); });
-  });
-}
-
-async function runCodex(roomId: string, agent: Agent, prompt: string, messageId: string): Promise<ChatMessage> {
-  const modelArgs = agent.model && agent.model !== "current" ? ["--model", agent.model] : [];
-  const args = agent.sessionId
-    ? ["exec", "resume", "--json", "-c", 'sandbox_mode="read-only"', ...modelArgs, agent.sessionId, prompt]
-    : ["exec", "--json", ...modelArgs, "-s", "read-only", prompt];
-  return new Promise((resolve) => {
-    const child = spawn("codex", args, { cwd: agent.cwd ?? process.cwd(), env: process.env, stdio: ["pipe", "pipe", "pipe"] });
-    child.stdin.end();
-    activeChildren.set(agent.id, child);
-    let buffer = ""; let stderr = ""; let text = ""; let sessionId = agent.sessionId;
-    const line = (raw: string) => {
-      if (!raw.trim()) return;
-      try { const event = JSON.parse(raw) as Record<string, any>; if (event.type === "thread.started" && typeof event.thread_id === "string") { sessionId = event.thread_id; updateAgent(agent.id, { sessionId }); } if (event.type === "item.completed" && event.item?.type === "agent_message") { text = event.item.text ?? text; append(roomId, messageId, text); } } catch { /* Ignore non-event output. */ }
-    };
-    child.stdout.on("data", (chunk: Buffer) => { buffer += chunk; const lines = buffer.split("\n"); buffer = lines.pop() ?? ""; lines.forEach(line); });
-    child.stderr.on("data", (chunk: Buffer) => { stderr += chunk; });
-    child.on("error", (error) => resolve(fail(roomId, messageId, error)));
-    child.on("close", (code) => { if (buffer) line(buffer); activeChildren.delete(agent.id); code === 0 && text ? resolve(complete(roomId, messageId, text, { runtime: "codex", model: agent.model, sessionId })) : resolve(fail(roomId, messageId, stderr.trim() || `Codex exited with code ${code}`)); });
-  });
-}
-
-export function invokeAgent(roomId: string, agent: Agent, directPrompt: string, senderName = "Human") {
-  if (agent.runtime === "human") throw new Error("A human participant cannot be invoked as a runtime.");
+export function invokeAgent(roomId: string, agent: Agent, directPrompt: string, senderName = "Human", timeoutMs = turnTimeoutMs) {
+  if (!isRuntimeId(agent.runtime)) throw new Error("A human participant cannot be invoked as a runtime.");
+  if (!listAgents(roomId).some((member) => member.id === agent.id)) throw new Error("The participant does not belong to this room.");
   if (activeRuns.has(agent.id)) throw new Error(`${agent.name} is already responding.`);
+  const sessionKey = agent.sessionId ? `${agent.runtime}:${agent.sessionId}` : null;
+  if (sessionKey && activeSessions.has(sessionKey)) throw new Error("This runtime session is already responding in another room. Use a separate session or wait for it to finish.");
   const placeholder = createMessage({ roomId, senderId: agent.id, status: "streaming", metadata: { runtime: agent.runtime } });
   publish(roomId, { type: "message.created", message: placeholder });
   publish(roomId, { type: "agent.updated", agent: updateAgent(agent.id, { status: "thinking" }) });
+  const adapter = getRuntimeAdapter(agent.runtime);
   const prompt = roomPrompt(roomId, agent, directPrompt, senderName);
-  const run = (agent.runtime === "claude-code" ? runClaude(roomId, agent, prompt, placeholder.id) : runCodex(roomId, agent, prompt, placeholder.id)).finally(() => {
-    publish(roomId, { type: "agent.updated", agent: updateAgent(agent.id, { status: "available" }) }); activeRuns.delete(agent.id); activeChildren.delete(agent.id);
+  let invocation: RunningInvocation;
+  const heldSessions = new Set<string>();
+  const holdSession = (id: string) => { const key = `${agent.runtime}:${id}`; activeSessions.add(key); heldSessions.add(key); };
+  if (agent.sessionId) holdSession(agent.sessionId);
+  try {
+    invocation = adapter.invoke({ agent, prompt, timeoutMs }, (event) => {
+      if (event.type === "response.delta") {
+        const message = updateMessage(placeholder.id, { content: event.text, status: "streaming" });
+        publish(roomId, { type: "message.updated", message });
+      }
+      if (event.type === "session.bound") { holdSession(event.sessionId); publish(roomId, { type: "agent.updated", agent: updateAgent(agent.id, { sessionId: event.sessionId }) }); }
+    });
+  } catch (error) {
+    for (const key of heldSessions) activeSessions.delete(key);
+    const detail = runtimeFailure(agent, error);
+    const message = updateMessage(placeholder.id, { content: `Runtime error: ${detail.message}`, status: "error", metadata: { error: detail } });
+    publish(roomId, { type: "message.updated", message });
+    publish(roomId, { type: "agent.updated", agent: updateAgent(agent.id, { status: "available" }) });
+    return { placeholder, completion: Promise.resolve(message) };
+  }
+  activeInvocations.set(agent.id, invocation);
+  const run = invocation.completion.then((result) => {
+    if (result.sessionId && result.sessionId !== agent.sessionId) publish(roomId, { type: "agent.updated", agent: updateAgent(agent.id, { sessionId: result.sessionId }) });
+    const message = updateMessage(placeholder.id, { content: result.text.trim(), status: "complete", metadata: result.metadata });
+    publish(roomId, { type: "message.updated", message }); return message;
+  }).catch((error) => {
+    const detail = runtimeFailure(agent, error);
+    const message = updateMessage(placeholder.id, { content: `Runtime error: ${detail.message}`, status: "error", metadata: { error: detail } });
+    publish(roomId, { type: "message.updated", message }); return message;
+  }).finally(() => {
+    publish(roomId, { type: "agent.updated", agent: updateAgent(agent.id, { status: "available" }) });
+    activeRuns.delete(agent.id); activeInvocations.delete(agent.id);
+    for (const key of heldSessions) activeSessions.delete(key);
   });
   activeRuns.set(agent.id, run);
   return { placeholder, completion: run };
@@ -111,6 +88,9 @@ export function invokeAgent(roomId: string, agent: Agent, directPrompt: string, 
 
 export function cancelAgents(agentIds: string[]) {
   let cancelled = 0;
-  for (const id of agentIds) { const child = activeChildren.get(id); if (child) { child.kill("SIGTERM"); cancelled += 1; } }
+  for (const id of agentIds) {
+    const invocation = activeInvocations.get(id);
+    if (invocation) { void invocation.cancel("Council stopped by the user."); cancelled += 1; }
+  }
   return cancelled;
 }

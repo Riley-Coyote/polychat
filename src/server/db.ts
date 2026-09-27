@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, statfsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -42,7 +42,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS agents (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
-    runtime TEXT NOT NULL CHECK(runtime IN ('human', 'claude-code', 'codex')),
+    runtime TEXT NOT NULL CHECK(runtime IN ('human', 'claude-code', 'codex', 'grok', 'kimi-code')),
     model TEXT,
     cwd TEXT,
     session_id TEXT,
@@ -68,6 +68,50 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_messages_room_created ON messages(room_id, created_at);
 `);
+
+function migrateRuntimeConstraint() {
+  const schema = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'agents'").get() as { sql?: string } | undefined;
+  const currentVersion = Number((db.prepare("PRAGMA user_version").get() as { user_version?: number }).user_version ?? 0);
+  if (schema?.sql?.includes("'grok'") && schema.sql.includes("'kimi-code'")) {
+    if (currentVersion < 2) db.exec("PRAGMA user_version = 2");
+    return;
+  }
+  db.exec("PRAGMA wal_checkpoint(FULL)");
+  const backupPath = join(dataDir, "polychat.db.pre-v1.1.bak");
+  if (!existsSync(backupPath)) {
+    const databaseSize = statSync(databasePath).size;
+    const filesystem = statfsSync(dataDir);
+    if (filesystem.bavail * filesystem.bsize < databaseSize * 2) throw new Error("Polychat v1.1 migration needs more free disk space for a safe database backup.");
+    copyFileSync(databasePath, backupPath);
+  }
+  db.exec("PRAGMA foreign_keys = OFF");
+  try {
+    db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE agents_v2 (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        runtime TEXT NOT NULL CHECK(runtime IN ('human', 'claude-code', 'codex', 'grok', 'kimi-code')),
+        model TEXT,
+        cwd TEXT,
+        session_id TEXT,
+        status TEXT NOT NULL DEFAULT 'available',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      INSERT INTO agents_v2 SELECT id, name, runtime, model, cwd, session_id, status, created_at, updated_at FROM agents;
+      DROP TABLE agents;
+      ALTER TABLE agents_v2 RENAME TO agents;
+      PRAGMA user_version = 2;
+      COMMIT;`);
+    const violation = db.prepare("PRAGMA foreign_key_check").get();
+    if (violation) throw new Error(`Foreign key validation failed after migration: ${JSON.stringify(violation)}`);
+  } catch (error) {
+    try { db.exec("ROLLBACK"); } catch { /* The transaction may already be closed. */ }
+    throw error;
+  } finally { db.exec("PRAGMA foreign_keys = ON"); }
+}
+
+migrateRuntimeConstraint();
 
 function addColumn(table: string, name: string, definition: string) {
   const columns = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;

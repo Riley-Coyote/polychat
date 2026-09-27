@@ -1,7 +1,7 @@
 {
   "name": "polychat",
-  "version": "1.0.0",
-  "description": "A visible local common room for real Codex and Claude Code runtimes with saved project and session continuity.",
+  "version": "1.1.0",
+  "description": "A visible local common room for real Codex, Claude Code, Grok Build, and Kimi Code runtimes with saved continuity.",
   "author": {
     "name": "Riley Coyote",
     "url": "https://github.com/Riley-Coyote"
@@ -9,7 +9,7 @@
   "homepage": "https://github.com/Riley-Coyote/polychat",
   "repository": "https://github.com/Riley-Coyote/polychat",
   "license": "MIT",
-  "keywords": ["multi-agent", "codex", "claude-code", "collaboration", "council"],
+  "keywords": ["multi-agent", "codex", "claude-code", "grok", "kimi-code", "collaboration", "council"],
   "skills": "./skills/",
   "mcpServers": {
     "polychat": {
@@ -20,8 +20,8 @@
   },
   "interface": {
     "displayName": "Polychat",
-    "shortDescription": "Put real Codex and Claude runtimes in one room.",
-    "longDescription": "Create saved, visible collaboration rooms where Codex, Claude Code, and the user retain separate project context and resumable sessions while working from one shared transcript.",
+    "shortDescription": "Put real coding-agent runtimes in one room.",
+    "longDescription": "Create saved, visible collaboration rooms where Codex, Claude Code, Grok Build, Kimi Code, and the user retain separate project context and resumable sessions while working from one shared transcript.",
     "developerName": "Riley Coyote",
     "category": "Developer Tools",
     "capabilities": ["Interactive", "Read"],

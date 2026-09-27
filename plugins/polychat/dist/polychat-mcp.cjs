@@ -21172,8 +21172,10 @@ function baseUrl() {
 }
 async function healthy(url = baseUrl()) {
   try {
-    const response = await fetch(`${url}/api/health`);
-    return response.ok;
+    const response = await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(3e3) });
+    if (!response.ok) return false;
+    const body = await response.json();
+    return body?.ok === true && body.service === "polychat" && body.dataDir === dataDir;
   } catch {
     return false;
   }
@@ -21207,11 +21209,21 @@ function commandVersion(command) {
     return null;
   }
 }
-var server = new McpServer({ name: "polychat", version: "1.0.0" });
-server.registerTool("polychat_doctor", { title: "Check Polychat", description: "Check the local Polychat broker, Node, Codex CLI, Claude Code, storage, and browser support.", annotations: { readOnlyHint: true }, inputSchema: {} }, async () => {
+var runtimeSchema = external_exports.enum(["claude-code", "codex", "grok", "kimi-code"]);
+var server = new McpServer({ name: "polychat", version: "1.1.0" });
+server.registerTool("polychat_doctor", { title: "Check Polychat", description: "Check the local Polychat broker, host requirements, and explicitly required runtimes.", annotations: { readOnlyHint: true }, inputSchema: { requiredRuntimes: external_exports.array(runtimeSchema).default([]) } }, async ({ requiredRuntimes }) => {
   const checks = { platform: process.platform, node: process.version, nodeSupported: Number(process.versions.node.split(".")[0]) >= 22, codex: commandVersion("codex"), claude: commandVersion("claude"), browserOpen: (0, import_node_fs.existsSync)("/usr/bin/open"), dataDir, broker: await healthy(), url: baseUrl() };
-  const ok = process.platform === "darwin" && checks.nodeSupported && Boolean(checks.codex) && Boolean(checks.claude) && checks.browserOpen;
-  return result(ok ? "Polychat is ready." : "Polychat needs attention. Inspect the structured checks.", { ok, checks });
+  const catalog = await request("/api/runtimes?refresh=true");
+  checks.broker = await healthy();
+  checks.url = baseUrl();
+  const required2 = catalog.runtimes.filter((entry) => requiredRuntimes.includes(entry.descriptor.id));
+  const ok = process.platform === "darwin" && checks.nodeSupported && checks.browserOpen && checks.broker && required2.every((entry) => entry.probe.status === "ready");
+  return result(ok ? "Polychat is ready." : "Polychat needs attention. Inspect the structured checks.", { ok, checks, requiredRuntimes, runtimes: catalog.runtimes });
+});
+server.registerTool("list_runtimes", { title: "List Polychat runtimes", description: "List runtime capabilities, versions, models, authentication state, and remediation.", annotations: { readOnlyHint: true }, inputSchema: { refresh: external_exports.boolean().default(false) } }, async ({ refresh }) => {
+  const data = await request(`/api/runtimes?refresh=${refresh}`);
+  const ready = data.runtimes.filter((entry) => entry.probe.status === "ready").length;
+  return result(`${ready} of ${data.runtimes.length} runtimes ready.`, data);
 });
 server.registerTool("list_rooms", { title: "List Polychat rooms", description: "List saved Polychat rooms.", annotations: { readOnlyHint: true }, inputSchema: { includeArchived: external_exports.boolean().default(false) } }, async ({ includeArchived }) => {
   const data = await request(`/api/rooms?archived=${includeArchived}`);
@@ -21234,11 +21246,11 @@ server.registerTool("read_room", { title: "Read a Polychat room", description: "
   return result(`${state.room.name}
 ${transcript || "No messages yet."}`, state);
 });
-server.registerTool("search_contexts", { title: "Search runtime contexts", description: "Search real Claude Code or Codex projects and optionally list exact resumable sessions.", annotations: { readOnlyHint: true }, inputSchema: { runtime: external_exports.enum(["claude-code", "codex"]), query: external_exports.string().default(""), projectId: external_exports.string().optional(), limit: external_exports.number().int().min(1).max(80).default(32) } }, async ({ runtime, query, projectId, limit }) => {
+server.registerTool("search_contexts", { title: "Search runtime contexts", description: "Search real runtime projects and optionally list exact resumable sessions.", annotations: { readOnlyHint: true }, inputSchema: { runtime: runtimeSchema, query: external_exports.string().default(""), projectId: external_exports.string().optional(), limit: external_exports.number().int().min(1).max(80).default(32) } }, async ({ runtime, query, projectId, limit }) => {
   const data = projectId ? await request(`/api/contexts/${runtime}/projects/${encodeURIComponent(projectId)}/sessions?limit=${limit}`) : await request(`/api/contexts/${runtime}/projects?q=${encodeURIComponent(query)}`);
   return result(projectId ? `${data.sessions.length} resumable sessions.` : `${data.projects.length} matching projects.`, data);
 });
-server.registerTool("configure_participant", { title: "Configure a participant", description: "Add a real Claude Code, Codex, or live host participant to a saved room.", inputSchema: { roomId: external_exports.string(), agentId: external_exports.string().optional(), name: external_exports.string().min(1).max(48), runtime: external_exports.enum(["claude-code", "codex"]), model: external_exports.string(), cwd: external_exports.string(), sessionId: external_exports.string().nullable().optional(), status: external_exports.enum(["available", "away"]).default("available") } }, async ({ roomId, agentId, ...configuration }) => {
+server.registerTool("configure_participant", { title: "Configure a participant", description: "Add a real Claude Code, Codex, Grok Build, or Kimi Code participant to a saved room.", inputSchema: { roomId: external_exports.string(), agentId: external_exports.string().optional(), name: external_exports.string().min(1).max(48), runtime: runtimeSchema, model: external_exports.string(), cwd: external_exports.string(), sessionId: external_exports.string().nullable().optional(), status: external_exports.enum(["available", "away"]).default("available") } }, async ({ roomId, agentId, ...configuration }) => {
   const participant = await request(agentId ? `/api/rooms/${roomId}/participants/${agentId}` : `/api/rooms/${roomId}/participants`, { method: agentId ? "PATCH" : "POST", body: JSON.stringify(configuration) });
   return result(`${agentId ? "Updated" : "Added"} ${participant.name}.`, { roomId, participant, url: `${baseUrl()}/?room=${roomId}` });
 });

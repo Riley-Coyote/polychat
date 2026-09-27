@@ -2,7 +2,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { join } from "node:path";
 
-const client = new Client({ name: "polychat-release-smoke", version: "1.0.0" });
+const client = new Client({ name: "polychat-release-smoke", version: "1.1.0" });
 const transport = new StdioClientTransport({
   command: process.execPath,
   args: [join(process.cwd(), "dist", "polychat-mcp.cjs")],
@@ -13,7 +13,7 @@ try {
   await client.connect(transport);
   const { tools } = await client.listTools();
   const required = [
-    "polychat_doctor", "list_rooms", "create_room", "open_room", "read_room",
+    "polychat_doctor", "list_runtimes", "list_rooms", "create_room", "open_room", "read_room",
     "search_contexts", "configure_participant", "remove_participant",
     "start_meeting", "send_message", "invoke_participant", "wait_for_events",
     "end_meeting",
