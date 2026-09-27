@@ -38,6 +38,11 @@ export function supervise(
   };
 }
 
+// Agents often speak, use a tool, then speak again. Each new stretch of the reply starts a new paragraph.
+export function appendSegment(text: string, piece: string, newSegment: boolean) {
+  return newSegment && text && piece && !text.endsWith("\n") ? `${text}\n\n${piece}` : text + piece;
+}
+
 export function parseJsonLines(onEvent: (event: Record<string, any>) => void) {
   let buffer = "";
   return {

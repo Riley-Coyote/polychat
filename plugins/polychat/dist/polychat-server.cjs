@@ -5457,10 +5457,10 @@ var require_raw_body = __commonJS({
       if (done) {
         return readStream(stream, encoding, length, limit, wrap(done));
       }
-      return new Promise(function executor(resolve2, reject) {
+      return new Promise(function executor(resolve3, reject) {
         readStream(stream, encoding, length, limit, function onRead(err, buf) {
           if (err) return reject(err);
-          resolve2(buf);
+          resolve3(buf);
         });
       });
     }
@@ -19023,8 +19023,8 @@ var require_view = __commonJS({
     var dirname7 = path.dirname;
     var basename6 = path.basename;
     var extname = path.extname;
-    var join10 = path.join;
-    var resolve2 = path.resolve;
+    var join11 = path.join;
+    var resolve3 = path.resolve;
     module2.exports = View;
     function View(name, options) {
       var opts = options || {};
@@ -19058,7 +19058,7 @@ var require_view = __commonJS({
       debug('lookup "%s"', name);
       for (var i = 0; i < roots.length && !path2; i++) {
         var root3 = roots[i];
-        var loc = resolve2(root3, name);
+        var loc = resolve3(root3, name);
         var dir = dirname7(loc);
         var file = basename6(loc);
         path2 = this.resolve(dir, file);
@@ -19083,14 +19083,14 @@ var require_view = __commonJS({
       });
       sync = false;
     };
-    View.prototype.resolve = function resolve3(dir, file) {
+    View.prototype.resolve = function resolve4(dir, file) {
       var ext = this.ext;
-      var path2 = join10(dir, file);
+      var path2 = join11(dir, file);
       var stat = tryStat(path2);
       if (stat && stat.isFile()) {
         return path2;
       }
-      path2 = join10(dir, basename6(file, ext), "index" + ext);
+      path2 = join11(dir, basename6(file, ext), "index" + ext);
       stat = tryStat(path2);
       if (stat && stat.isFile()) {
         return path2;
@@ -21342,7 +21342,7 @@ var require_application = __commonJS({
     var compileETag = require_utils3().compileETag;
     var compileQueryParser = require_utils3().compileQueryParser;
     var compileTrust = require_utils3().compileTrust;
-    var resolve2 = require("node:path").resolve;
+    var resolve3 = require("node:path").resolve;
     var once = require_once();
     var Router = require_router();
     var slice = Array.prototype.slice;
@@ -21396,7 +21396,7 @@ var require_application = __commonJS({
       this.mountpath = "/";
       this.locals.settings = this.settings;
       this.set("view", View);
-      this.set("views", resolve2("views"));
+      this.set("views", resolve3("views"));
       this.set("jsonp callback name", "callback");
       if (env === "production") {
         this.enable("view cache");
@@ -22911,10 +22911,10 @@ var require_send = __commonJS({
     var Stream = require("stream");
     var util = require("util");
     var extname = path.extname;
-    var join10 = path.join;
+    var join11 = path.join;
     var normalize = path.normalize;
-    var resolve2 = path.resolve;
-    var sep = path.sep;
+    var resolve3 = path.resolve;
+    var sep2 = path.sep;
     var BYTES_RANGE_REGEXP = /^ *bytes=/;
     var MAX_MAXAGE = 60 * 60 * 24 * 365 * 1e3;
     var UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
@@ -22942,7 +22942,7 @@ var require_send = __commonJS({
       this._maxage = opts.maxAge || opts.maxage;
       this._maxage = typeof this._maxage === "string" ? ms(this._maxage) : Number(this._maxage);
       this._maxage = !isNaN(this._maxage) ? Math.min(Math.max(0, this._maxage), MAX_MAXAGE) : 0;
-      this._root = opts.root ? resolve2(opts.root) : null;
+      this._root = opts.root ? resolve3(opts.root) : null;
     }
     util.inherits(SendStream, Stream);
     SendStream.prototype.error = function error(status, err) {
@@ -23075,23 +23075,23 @@ var require_send = __commonJS({
       var parts;
       if (root3 !== null) {
         if (path2) {
-          path2 = normalize("." + sep + path2);
+          path2 = normalize("." + sep2 + path2);
         }
         if (UP_PATH_REGEXP.test(path2)) {
           debug('malicious path "%s"', path2);
           this.error(403);
           return res;
         }
-        parts = path2.split(sep);
-        path2 = normalize(join10(root3, path2));
+        parts = path2.split(sep2);
+        path2 = normalize(join11(root3, path2));
       } else {
         if (UP_PATH_REGEXP.test(path2)) {
           debug('malicious path "%s"', path2);
           this.error(403);
           return res;
         }
-        parts = normalize(path2).split(sep);
-        path2 = resolve2(path2);
+        parts = normalize(path2).split(sep2);
+        path2 = resolve3(path2);
       }
       if (containsDotFile(parts)) {
         debug('%s dotfile "%s"', this._dotfiles, path2);
@@ -23184,7 +23184,7 @@ var require_send = __commonJS({
       var self = this;
       debug('stat "%s"', path2);
       fs.stat(path2, function onstat(err, stat) {
-        var pathEndsWithSep = path2[path2.length - 1] === sep;
+        var pathEndsWithSep = path2[path2.length - 1] === sep2;
         if (err && err.code === "ENOENT" && !extname(path2) && !pathEndsWithSep) {
           return next(err);
         }
@@ -23216,7 +23216,7 @@ var require_send = __commonJS({
           if (err) return self.onStatError(err);
           return self.error(404);
         }
-        var p = join10(path2, self._index[i]);
+        var p = join11(path2, self._index[i]);
         debug('stat "%s"', p);
         fs.stat(p, function(err2, stat) {
           if (err2) return next(err2);
@@ -23469,7 +23469,7 @@ var require_response = __commonJS({
     var cookie = require_cookie();
     var send = require_send();
     var extname = path.extname;
-    var resolve2 = path.resolve;
+    var resolve3 = path.resolve;
     var vary = require_vary();
     var { Buffer: Buffer2 } = require("node:buffer");
     var res = Object.create(http.ServerResponse.prototype);
@@ -23675,7 +23675,7 @@ var require_response = __commonJS({
       }
       opts = Object.create(opts);
       opts.headers = headers;
-      var fullPath = !opts.root ? resolve2(path2) : path2;
+      var fullPath = !opts.root ? resolve3(path2) : path2;
       return this.sendFile(fullPath, opts, done);
     };
     res.contentType = res.type = function contentType(type) {
@@ -23924,7 +23924,7 @@ var require_serve_static = __commonJS({
     var encodeUrl = require_encodeurl();
     var escapeHtml = require_escape_html();
     var parseUrl = require_parseurl();
-    var resolve2 = require("path").resolve;
+    var resolve3 = require("path").resolve;
     var send = require_send();
     var url = require("url");
     module2.exports = serveStatic;
@@ -23943,7 +23943,7 @@ var require_serve_static = __commonJS({
         throw new TypeError("option setHeaders must be function");
       }
       opts.maxage = opts.maxage || opts.maxAge || 0;
-      opts.root = resolve2(root3);
+      opts.root = resolve3(root3);
       var onDirectory = redirect ? createRedirectDirectoryListener() : createNotFoundDirectoryListener();
       return function serveStatic2(req, res, next) {
         if (req.method !== "GET" && req.method !== "HEAD") {
@@ -24072,7 +24072,7 @@ var require_express2 = __commonJS({
 // src/server/index.ts
 var import_express = __toESM(require_express2(), 1);
 var import_node_fs11 = require("node:fs");
-var import_node_path9 = require("node:path");
+var import_node_path11 = require("node:path");
 
 // src/server/db.ts
 var import_node_sqlite = require("node:sqlite");
@@ -24680,6 +24680,11 @@ function supervise(runtime, child, completion, sink, timeoutMs, gracefulCancel) 
     }
   };
 }
+function appendSegment(text, piece, newSegment) {
+  return newSegment && text && piece && !text.endsWith("\n") ? `${text}
+
+${piece}` : text + piece;
+}
 function parseJsonLines(onEvent) {
   let buffer = "";
   return {
@@ -24763,10 +24768,16 @@ var claudeAdapter = {
     let stderr = "";
     let text = "";
     let resultText = "";
+    let newSegment = false;
     const parser = parseJsonLines((event) => {
+      if (event.type === "stream_event" && event.event?.type === "message_start") newSegment = true;
       if (event.type === "stream_event" && event.event?.delta?.type === "text_delta") {
-        text += String(event.event.delta.text ?? "");
-        sink({ type: "response.delta", text });
+        const piece = String(event.event.delta.text ?? "");
+        if (piece) {
+          text = appendSegment(text, piece, newSegment);
+          newSegment = false;
+          sink({ type: "response.delta", text });
+        }
       }
       if (event.type === "assistant" && !text && Array.isArray(event.message?.content)) {
         text = event.message.content.filter((block) => block.type === "text").map((block) => block.text).join("");
@@ -24778,12 +24789,12 @@ var claudeAdapter = {
     child.stderr.on("data", (chunk) => {
       stderr += chunk;
     });
-    const completion = new Promise((resolve2, reject) => {
+    const completion = new Promise((resolve3, reject) => {
       child.on("error", reject);
       child.on("close", (code) => {
         parser.flush();
         const finalText = text || resultText;
-        if (code === 0 && finalText) resolve2({ text: finalText, sessionId, metadata: { runtime: "claude-code", sessionId } });
+        if (code === 0 && finalText) resolve3({ text: finalText, sessionId, metadata: { runtime: "claude-code", sessionId } });
         else reject(runtimeError("claude-code", code === null ? "invocation_cancelled" : "process_failed", stderr.trim() || `Claude Code exited with code ${code}.`, code !== null));
       });
     });
@@ -24892,7 +24903,7 @@ var codexAdapter = {
     const executable = findExecutable("codex", "codex");
     if (!executable) throw runtimeError("codex", "runtime_missing", "Codex is not installed.", false, descriptor2.setupCommand);
     const modelArgs = agent.model && agent.model !== "current" ? ["--model", agent.model] : [];
-    const args = agent.sessionId ? ["exec", "resume", "--json", "-c", 'sandbox_mode="read-only"', ...modelArgs, agent.sessionId, prompt] : ["exec", "--json", ...modelArgs, "-s", "read-only", prompt];
+    const args = agent.sessionId ? ["exec", "resume", "--json", "--skip-git-repo-check", "-c", 'sandbox_mode="read-only"', ...modelArgs, agent.sessionId, prompt] : ["exec", "--json", "--skip-git-repo-check", ...modelArgs, "-s", "read-only", prompt];
     const child = spawnRuntime(executable, args, agent.cwd ?? process.cwd());
     child.stdin.end();
     sink({ type: "response.started" });
@@ -24913,11 +24924,11 @@ var codexAdapter = {
     child.stderr.on("data", (chunk) => {
       stderr += chunk;
     });
-    const completion = new Promise((resolve2, reject) => {
+    const completion = new Promise((resolve3, reject) => {
       child.on("error", reject);
       child.on("close", (code) => {
         parser.flush();
-        if (code === 0 && text) resolve2({ text, sessionId, metadata: { runtime: "codex", model: agent.model, sessionId } });
+        if (code === 0 && text) resolve3({ text, sessionId, metadata: { runtime: "codex", model: agent.model, sessionId } });
         else reject(runtimeError("codex", code === null ? "invocation_cancelled" : "process_failed", stderr.trim() || `Codex exited with code ${code}.`, code !== null));
       });
     });
@@ -25041,6 +25052,7 @@ function discoveredModels(executable) {
   }
 }
 function eventText(event) {
+  if (event.type === "text" && typeof event.data === "string") return { mode: "delta", text: event.data };
   if (typeof event.delta?.text === "string") return { mode: "delta", text: event.delta.text };
   if (event.type === "content_block_delta" && typeof event.delta?.text === "string") return { mode: "delta", text: event.delta.text };
   const content = event.message?.content ?? event.content;
@@ -25097,21 +25109,27 @@ ${result.stderr}`);
     if (!agent.sessionId) sink({ type: "session.bound", sessionId });
     let stderr = "";
     let text = "";
+    let newSegment = false;
     const parser = parseJsonLines((event) => {
+      if (event.type === "tool_call") {
+        newSegment = true;
+        return;
+      }
       const next = eventText(event);
-      if (!next) return;
-      text = next.mode === "delta" ? text + next.text : next.text;
+      if (!next || !next.text) return;
+      text = next.mode === "delta" ? appendSegment(text, next.text, newSegment) : next.text;
+      newSegment = false;
       sink({ type: "response.delta", text });
     });
     child.stdout.on("data", (chunk) => parser.push(chunk));
     child.stderr.on("data", (chunk) => {
       stderr += chunk;
     });
-    const completion = new Promise((resolve2, reject) => {
+    const completion = new Promise((resolve3, reject) => {
       child.on("error", reject);
       child.on("close", (code) => {
         parser.flush();
-        if (code === 0 && text) resolve2({ text, sessionId, metadata: { runtime: "grok", model: agent.model, sessionId, safety: "read-only" } });
+        if (code === 0 && text) resolve3({ text, sessionId, metadata: { runtime: "grok", model: agent.model, sessionId, safety: "read-only" } });
         else reject(grokFailure(stderr, code));
       });
     });
@@ -25121,8 +25139,8 @@ ${result.stderr}`);
 
 // src/server/runtimes/adapters/kimi.ts
 var import_node_fs10 = require("node:fs");
-var import_node_os8 = require("node:os");
-var import_node_path8 = require("node:path");
+var import_node_os9 = require("node:os");
+var import_node_path10 = require("node:path");
 
 // src/server/kimiContexts.ts
 var import_node_fs7 = require("node:fs");
@@ -25204,14 +25222,17 @@ function findKimiSessionCwd(sessionId) {
 // src/server/runtimes/transports/acpClient.ts
 var import_node_child_process5 = require("node:child_process");
 var import_node_fs8 = require("node:fs");
+var import_node_path8 = require("node:path");
 var import_node_readline = require("node:readline");
 var AcpClient = class {
   child;
   nextId = 1;
   pending = /* @__PURE__ */ new Map();
   updateHandler = () => void 0;
+  root;
   stderr = "";
   constructor(command, args, cwd) {
+    this.root = (0, import_node_fs8.realpathSync)(cwd);
     this.child = (0, import_node_child_process5.spawn)(command, args, { cwd, env: process.env, stdio: ["pipe", "pipe", "pipe"] });
     this.child.stderr.on("data", (chunk) => {
       this.stderr += chunk.toString();
@@ -25228,12 +25249,12 @@ var AcpClient = class {
   }
   request(method, params, timeoutMs = 3e4) {
     const id = this.nextId++;
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve3, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`${method} timed out.`));
       }, timeoutMs);
-      this.pending.set(id, { resolve: resolve2, reject, timer });
+      this.pending.set(id, { resolve: resolve3, reject, timer });
       this.write({ jsonrpc: "2.0", id, method, params });
     });
   }
@@ -25280,8 +25301,7 @@ var AcpClient = class {
         return;
       }
       if (message.method === "fs/read_text_file") {
-        const path = String(message.params?.path ?? "");
-        const text = (0, import_node_fs8.readFileSync)(path, "utf8");
+        const text = (0, import_node_fs8.readFileSync)(this.insideProject(String(message.params?.path ?? "")), "utf8");
         const line = Math.max(1, Number(message.params?.line ?? 1));
         const limit = Math.max(1, Number(message.params?.limit ?? Number.MAX_SAFE_INTEGER));
         const content = text.split("\n").slice(line - 1, line - 1 + limit).join("\n");
@@ -25292,6 +25312,12 @@ var AcpClient = class {
     } catch (error) {
       this.write({ jsonrpc: "2.0", id: message.id, error: { code: -32e3, message: error instanceof Error ? error.message : String(error) } });
     }
+  }
+  // The broker reads files on the runtime's behalf, outside its sandbox, so it serves only the project folder.
+  insideProject(requested) {
+    const target = (0, import_node_fs8.realpathSync)((0, import_node_path8.resolve)(this.root, requested));
+    if (target !== this.root && !target.startsWith(`${this.root}${import_node_path8.sep}`)) throw new Error("Polychat lets this runtime read files only inside its project folder.");
+    return target;
   }
   write(message) {
     this.child.stdin.write(`${JSON.stringify(message)}
@@ -25308,19 +25334,30 @@ var AcpClient = class {
 
 // src/server/runtimes/transports/seatbelt.ts
 var import_node_fs9 = require("node:fs");
+var import_node_os8 = require("node:os");
+var import_node_path9 = require("node:path");
 function seatbeltAvailable() {
   return (0, import_node_fs9.existsSync)("/usr/bin/sandbox-exec");
 }
 function quote(value) {
   return value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
-function readOnlyProjectProfile(projectCwd) {
+function real(path) {
+  try {
+    return (0, import_node_fs9.realpathSync)(path);
+  } catch {
+    return path;
+  }
+}
+function readOnlyProfile(home = (0, import_node_os8.homedir)()) {
+  const writable = [...new Set([(0, import_node_path9.join)(home, ".kimi-code"), (0, import_node_path9.join)(home, ".kimi"), "/private/tmp", "/private/var/folders", (0, import_node_os8.tmpdir)()].map(real))];
   return `(version 1)
 (allow default)
-(deny file-write* (subpath "${quote(projectCwd)}"))`;
+(deny file-write*)
+(allow file-write* ${writable.map((path) => `(subpath "${quote(path)}")`).join(" ")} (literal "/dev/null") (literal "/dev/tty") (regex #"^/dev/fd/"))`;
 }
-function sandboxedCommand(executable, projectCwd) {
-  return { command: "/usr/bin/sandbox-exec", args: ["-p", readOnlyProjectProfile(projectCwd), executable, "acp"] };
+function sandboxedCommand(executable) {
+  return { command: "/usr/bin/sandbox-exec", args: ["-p", readOnlyProfile(), executable, "acp"] };
 }
 
 // src/server/runtimes/adapters/kimi.ts
@@ -25340,11 +25377,11 @@ var descriptor4 = {
   presets: presets4
 };
 function hasAuth() {
-  const root3 = (0, import_node_path8.join)((0, import_node_os8.homedir)(), ".kimi-code");
-  return (0, import_node_fs10.existsSync)((0, import_node_path8.join)(root3, "credentials", "kimi-code.json")) || (0, import_node_fs10.existsSync)((0, import_node_path8.join)(root3, "oauth", "kimi-code.json"));
+  const root3 = (0, import_node_path10.join)((0, import_node_os9.homedir)(), ".kimi-code");
+  return (0, import_node_fs10.existsSync)((0, import_node_path10.join)(root3, "credentials", "kimi-code.json")) || (0, import_node_fs10.existsSync)((0, import_node_path10.join)(root3, "oauth", "kimi-code.json"));
 }
 function configuredModels() {
-  const path = (0, import_node_path8.join)((0, import_node_os8.homedir)(), ".kimi-code", "config.toml");
+  const path = (0, import_node_path10.join)((0, import_node_os9.homedir)(), ".kimi-code", "config.toml");
   if (!(0, import_node_fs10.existsSync)(path)) return [];
   try {
     return [...(0, import_node_fs10.readFileSync)(path, "utf8").matchAll(/^\[models\."?([^\]"]+)"?\]/gm)].map((match) => match[1]);
@@ -25388,7 +25425,7 @@ var kimiAdapter = {
     if (!hasAuth()) throw runtimeError("kimi-code", "runtime_unauthenticated", "Kimi Code is installed but not signed in.", false, descriptor4.loginCommand);
     if (!seatbeltAvailable()) throw runtimeError("kimi-code", "runtime_unsupported", "Kimi requires macOS Seatbelt for read-only council turns.");
     const cwd = agent.cwd ?? process.cwd();
-    const launch = sandboxedCommand(executable, cwd);
+    const launch = sandboxedCommand(executable);
     const client = new AcpClient(launch.command, launch.args, cwd);
     let sessionId = agent.sessionId;
     let text = "";
@@ -25403,7 +25440,12 @@ var kimiAdapter = {
     const completion = (async () => {
       sink({ type: "response.started" });
       const initialized = await client.request("initialize", { protocolVersion: 1, clientCapabilities: { fs: { readTextFile: true, writeTextFile: false }, terminal: false } });
-      await client.request("authenticate", { methodId: "login" });
+      try {
+        await client.request("authenticate", { methodId: "login" });
+      } catch (error) {
+        if (/authenticat/i.test(error instanceof Error ? error.message : String(error))) throw runtimeError("kimi-code", "runtime_unauthenticated", `Kimi Code's sign-in has expired. Run \`${descriptor4.loginCommand}\` in a terminal, then try again.`, false, descriptor4.loginCommand);
+        throw error;
+      }
       let session;
       if (sessionId) {
         const canResume = Boolean(initialized.agentCapabilities?.sessionCapabilities?.resume);
@@ -25600,6 +25642,20 @@ function cancelAgents(agentIds) {
 var app = (0, import_express.default)();
 var preferredPort = Number(process.env.POLYCHAT_PORT ?? 4317);
 var host = "127.0.0.1";
+var loopbackNames = /* @__PURE__ */ new Set(["127.0.0.1", "localhost", "[::1]"]);
+function loopbackUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" && loopbackNames.has(url.hostname);
+  } catch {
+    return false;
+  }
+}
+app.use((request, response, next) => {
+  const origin = request.headers.origin;
+  if (!loopbackUrl(`http://${request.headers.host ?? ""}`) || origin !== void 0 && !loopbackUrl(origin)) return response.status(403).json({ error: "Polychat only accepts requests from this machine." });
+  next();
+});
 app.use(import_express.default.json({ limit: "1mb" }));
 app.use((_request, response, next) => {
   response.setHeader("Cache-Control", "no-store");
@@ -25740,7 +25796,7 @@ app.post("/api/rooms/:roomId/participants", (request, response) => {
     if (cwd && (!(0, import_node_fs11.existsSync)(cwd) || !(0, import_node_fs11.statSync)(cwd).isDirectory())) return response.status(400).json({ error: "The working folder does not exist." });
     const sessionId = typeof request.body?.sessionId === "string" ? request.body.sessionId : null;
     const sessionCwd = sessionId && runtime === "grok" ? findGrokSessionCwd(sessionId) : sessionId && runtime === "kimi-code" ? findKimiSessionCwd(sessionId) : null;
-    if (cwd && sessionCwd && (0, import_node_path9.resolve)(cwd) !== (0, import_node_path9.resolve)(sessionCwd)) return response.status(409).json({ error: "The selected session belongs to a different project directory.", code: "session_mismatch", runtime });
+    if (cwd && sessionCwd && (0, import_node_path11.resolve)(cwd) !== (0, import_node_path11.resolve)(sessionCwd)) return response.status(409).json({ error: "The selected session belongs to a different project directory.", code: "session_mismatch", runtime });
     const fallbackModel = runtime === "claude-code" ? "opus" : "current";
     const agent = createAgent({ roomId: request.params.roomId, runtime, name, model: runtime === "human" ? null : String(request.body?.model || fallbackModel), cwd, sessionId, status: request.body?.status === "away" ? "away" : "available" });
     publish(request.params.roomId, { type: "agent.updated", agent });
@@ -25756,7 +25812,7 @@ app.patch("/api/rooms/:roomId/participants/:agentId", (request, response) => {
     const cwd = typeof request.body?.cwd === "string" ? request.body.cwd : current.cwd;
     const sessionId = request.body?.sessionId === null || typeof request.body?.sessionId === "string" ? request.body.sessionId : current.sessionId;
     const sessionCwd = sessionId && current.runtime === "grok" ? findGrokSessionCwd(sessionId) : sessionId && current.runtime === "kimi-code" ? findKimiSessionCwd(sessionId) : null;
-    if (cwd && sessionCwd && (0, import_node_path9.resolve)(cwd) !== (0, import_node_path9.resolve)(sessionCwd)) return response.status(409).json({ error: "The selected session belongs to a different project directory.", code: "session_mismatch", runtime: current.runtime });
+    if (cwd && sessionCwd && (0, import_node_path11.resolve)(cwd) !== (0, import_node_path11.resolve)(sessionCwd)) return response.status(409).json({ error: "The selected session belongs to a different project directory.", code: "session_mismatch", runtime: current.runtime });
     const patch = { ...typeof request.body?.name === "string" ? { name: request.body.name } : {}, ...typeof request.body?.model === "string" ? { model: request.body.model } : {}, ...typeof request.body?.cwd === "string" ? { cwd: request.body.cwd } : {}, ...request.body?.sessionId === null || typeof request.body?.sessionId === "string" ? { sessionId: request.body.sessionId } : {}, ...typeof request.body?.status === "string" ? { status: request.body.status } : {} };
     const agent = updateAgent(request.params.agentId, patch);
     publish(request.params.roomId, { type: "agent.updated", agent });
@@ -25852,16 +25908,16 @@ app.post("/api/messages", (request, response) => {
 });
 app.get("/api/claude/projects", (request, response) => response.json({ projects: listClaudeProjects(typeof request.query.q === "string" ? request.query.q : "") }));
 app.get("/api/claude/projects/:id/sessions", (request, response) => response.json({ sessions: listClaudeSessions(request.params.id, Number(request.query.limit ?? 32)) }));
-var entryDir = (0, import_node_path9.dirname)((0, import_node_path9.resolve)(process.argv[1] ?? process.cwd()));
-var dist = (0, import_node_path9.basename)(entryDir) === "dist" ? entryDir : (0, import_node_path9.join)(entryDir, "../../dist");
+var entryDir = (0, import_node_path11.dirname)((0, import_node_path11.resolve)(process.argv[1] ?? process.cwd()));
+var dist = (0, import_node_path11.basename)(entryDir) === "dist" ? entryDir : (0, import_node_path11.join)(entryDir, "../../dist");
 if ((0, import_node_fs11.existsSync)(dist)) {
   app.use(import_express.default.static(dist));
-  app.get("/{*path}", (_request, response) => response.sendFile((0, import_node_path9.join)(dist, "index.html")));
+  app.get("/{*path}", (_request, response) => response.sendFile((0, import_node_path11.join)(dist, "index.html")));
 }
 function listen(port) {
   const server = app.listen(port, host, () => {
     const url = `http://${host}:${port}`;
-    (0, import_node_fs11.writeFileSync)((0, import_node_path9.join)(dataDir, "runtime.json"), JSON.stringify({ pid: process.pid, port, url, startedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2));
+    (0, import_node_fs11.writeFileSync)((0, import_node_path11.join)(dataDir, "runtime.json"), JSON.stringify({ pid: process.pid, port, url, startedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2));
     console.log(`Polychat broker listening at ${url}`);
   });
   server.on("error", (error) => {

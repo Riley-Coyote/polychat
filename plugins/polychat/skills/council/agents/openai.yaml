@@ -1,4 +1,0 @@
-interface:
-  display_name: "Council"
-  short_description: "Open a real Codex and Claude collaboration room"
-  default_prompt: "Start a council with the relevant Codex and Claude collaborators for this project."

@@ -6,13 +6,13 @@ Polychat is a local common room for you and real Codex, Claude Code, Grok Build,
 
 ## 60-second demo
 
-1. Invoke `$council` in Codex or `/council` in Claude Code with an agenda and the collaborators you want.
+1. Invoke `$polychat` in Codex or `/polychat:polychat` in Claude Code with an agenda and the collaborators you want, or just ask for Polychat in plain words.
 2. Polychat creates a saved local room, finds the requested project or exact prior session, and opens the transcript.
 3. Watch real CLI responses stream into the room, send a message to everyone or one collaborator, and return to the saved room later.
 
 ## Install
 
-Polychat v1.1 supports macOS and requires Node.js 22+ plus Codex or Claude Code as the host. Grok Build 0.2.114+ and Kimi Code 0.27.0+ are optional peers. Sign in with each CLI normally; Polychat never stores provider credentials.
+Polychat v1.1 supports macOS and requires Node.js 22.13+ plus Codex or Claude Code as the host. Grok Build 0.2.114+ and Kimi Code 0.27.0+ are optional peers. Sign in with each CLI normally; Polychat never stores provider credentials.
 
 ### Codex
 
@@ -24,7 +24,7 @@ codex plugin add polychat@polychat
 Start a new Codex task after installation, then invoke:
 
 ```text
-$council Brainstorm the next version of this project with Opus.
+$polychat Brainstorm the next version of this project with Opus.
 ```
 
 ### Claude Code
@@ -37,10 +37,10 @@ claude plugin install polychat@polychat
 Restart Claude Code, then invoke:
 
 ```text
-/council Brainstorm this architecture with Codex.
+/polychat:polychat Brainstorm this architecture with Codex.
 ```
 
-## What a council does
+## What a meeting does
 
 The invoking Codex or Claude task becomes the live host. Polychat creates a saved room, resolves the requested project and exact runtime sessions, opens the browser transcript, and conducts a bounded two-round discussion by default. The host participates between rounds and posts a final synthesis.
 
@@ -52,12 +52,12 @@ Rooms support:
 - Searchable project and exact-session history for all four runtimes.
 - Direct messages or room-wide messages.
 - Saved transcripts and participant context bindings.
-- Read/plan-oriented runtime execution for ideation. Grok uses its read-only sandbox; Kimi is additionally wrapped in macOS Seatbelt.
+- Read/plan-oriented runtime execution for ideation. Grok uses its read-only sandbox; Kimi is additionally wrapped in macOS Seatbelt, which lets it write only its own state and scratch space.
 - Automatic broker startup and crash recovery.
 
 ## Privacy and storage
 
-Polychat binds only to `127.0.0.1`. It has no hosted service, account, telemetry, remote synchronization, or model API proxy.
+Polychat binds only to `127.0.0.1` and answers only requests addressed to this machine from its own pages, so other websites can't reach it. It has no hosted service, account, telemetry, remote synchronization, or model API proxy.
 
 Local data lives in:
 
@@ -106,7 +106,7 @@ The plugin exposes:
 - `wait_for_events`
 - `end_meeting`
 
-The v0 tools remain as compatibility aliases for one release.
+The v0 tools (`post_message`, `ask_claude`, `ask_codex`, `configure_claude`) remain as compatibility aliases.
 
 ## Troubleshooting
 

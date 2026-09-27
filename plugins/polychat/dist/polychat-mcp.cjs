@@ -21202,6 +21202,10 @@ async function request(path, init) {
 function result(summary, data) {
   return { content: [{ type: "text", text: summary }], structuredContent: data };
 }
+function nodeHasSqlite() {
+  const [major, minor] = process.versions.node.split(".").map(Number);
+  return major > 22 || major === 22 && minor >= 13;
+}
 function commandVersion(command) {
   try {
     return (0, import_node_child_process.execFileSync)(command, ["--version"], { encoding: "utf8", timeout: 5e3 }).trim().split("\n")[0];
@@ -21212,7 +21216,7 @@ function commandVersion(command) {
 var runtimeSchema = external_exports.enum(["claude-code", "codex", "grok", "kimi-code"]);
 var server = new McpServer({ name: "polychat", version: "1.1.0" });
 server.registerTool("polychat_doctor", { title: "Check Polychat", description: "Check the local Polychat broker, host requirements, and explicitly required runtimes.", annotations: { readOnlyHint: true }, inputSchema: { requiredRuntimes: external_exports.array(runtimeSchema).default([]) } }, async ({ requiredRuntimes }) => {
-  const checks = { platform: process.platform, node: process.version, nodeSupported: Number(process.versions.node.split(".")[0]) >= 22, codex: commandVersion("codex"), claude: commandVersion("claude"), browserOpen: (0, import_node_fs.existsSync)("/usr/bin/open"), dataDir, broker: await healthy(), url: baseUrl() };
+  const checks = { platform: process.platform, node: process.version, nodeSupported: nodeHasSqlite(), codex: commandVersion("codex"), claude: commandVersion("claude"), browserOpen: (0, import_node_fs.existsSync)("/usr/bin/open"), dataDir, broker: await healthy(), url: baseUrl() };
   const catalog = await request("/api/runtimes?refresh=true");
   checks.broker = await healthy();
   checks.url = baseUrl();
@@ -21229,7 +21233,7 @@ server.registerTool("list_rooms", { title: "List Polychat rooms", description: "
   const data = await request(`/api/rooms?archived=${includeArchived}`);
   return result(`${data.rooms.length} saved room${data.rooms.length === 1 ? "" : "s"}.`, data);
 });
-server.registerTool("create_room", { title: "Create a Polychat room", description: "Create a new saved collaboration room. New council invocations should create a room unless the user explicitly asks to resume one.", inputSchema: { name: external_exports.string().min(1).max(80), projectCwd: external_exports.string().optional() } }, async ({ name, projectCwd }) => {
+server.registerTool("create_room", { title: "Create a Polychat room", description: "Create a new saved collaboration room. New meetings should create a room unless the user explicitly asks to resume one.", inputSchema: { name: external_exports.string().min(1).max(80), projectCwd: external_exports.string().optional() } }, async ({ name, projectCwd }) => {
   const room = await request("/api/rooms", { method: "POST", body: JSON.stringify({ name, projectCwd }) });
   return result(`Created ${room.name}.`, { room, roomId: room.id, url: `${baseUrl()}/?room=${room.id}` });
 });

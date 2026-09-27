@@ -3,7 +3,7 @@ import type { ModelOption, RuntimeDescriptor } from "../../../shared/types.js";
 import { listClaudeProjects, listClaudeSessions } from "../../claudeContexts.js";
 import type { RuntimeAdapter, RuntimeInvocationResult } from "../contracts.js";
 import { basicProbe, findExecutable, spawnRuntime } from "../transports/process.js";
-import { parseJsonLines, runtimeError, supervise } from "./helpers.js";
+import { appendSegment, parseJsonLines, runtimeError, supervise } from "./helpers.js";
 
 const presets: ModelOption[] = [
   { id: "opus", label: "Opus", name: "Opus", detail: "Claude Code's most capable configured model" },
@@ -37,9 +37,10 @@ export const claudeAdapter: RuntimeAdapter = {
     if (agent.sessionId) args.push("--resume", agent.sessionId); else args.push("--session-id", sessionId);
     const child = spawnRuntime(executable, args, agent.cwd ?? process.cwd()); child.stdin.end();
     sink({ type: "response.started" }); if (!agent.sessionId) sink({ type: "session.bound", sessionId });
-    let stderr = ""; let text = ""; let resultText = "";
+    let stderr = ""; let text = ""; let resultText = ""; let newSegment = false;
     const parser = parseJsonLines((event) => {
-      if (event.type === "stream_event" && event.event?.delta?.type === "text_delta") { text += String(event.event.delta.text ?? ""); sink({ type: "response.delta", text }); }
+      if (event.type === "stream_event" && event.event?.type === "message_start") newSegment = true;
+      if (event.type === "stream_event" && event.event?.delta?.type === "text_delta") { const piece = String(event.event.delta.text ?? ""); if (piece) { text = appendSegment(text, piece, newSegment); newSegment = false; sink({ type: "response.delta", text }); } }
       if (event.type === "assistant" && !text && Array.isArray(event.message?.content)) { text = event.message.content.filter((block: any) => block.type === "text").map((block: any) => block.text).join(""); if (text) sink({ type: "response.delta", text }); }
       if (event.type === "result" && typeof event.result === "string") resultText = event.result;
     });

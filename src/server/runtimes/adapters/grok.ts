@@ -7,7 +7,7 @@ import type { ModelOption, RuntimeDescriptor } from "../../../shared/types.js";
 import { listGrokProjects, listGrokSessions } from "../../grokContexts.js";
 import type { RuntimeAdapter, RuntimeInvocationResult } from "../contracts.js";
 import { basicProbe, findExecutable, spawnRuntime } from "../transports/process.js";
-import { parseJsonLines, runtimeError, supervise } from "./helpers.js";
+import { appendSegment, parseJsonLines, runtimeError, supervise } from "./helpers.js";
 
 const presets: ModelOption[] = [
   { id: "current", label: "Configured default", name: "Configured default", detail: "Use Grok Build's configured model" },
@@ -27,7 +27,9 @@ function discoveredModels(executable: string): ModelOption[] {
   } catch { return []; }
 }
 
-function eventText(event: Record<string, any>) {
+export function eventText(event: Record<string, any>) {
+  // Grok Build 1.0 streams the reply as {type: "text", data} pieces, and its reasoning as "thought" events, which stay hidden.
+  if (event.type === "text" && typeof event.data === "string") return { mode: "delta" as const, text: event.data };
   if (typeof event.delta?.text === "string") return { mode: "delta" as const, text: event.delta.text };
   if (event.type === "content_block_delta" && typeof event.delta?.text === "string") return { mode: "delta" as const, text: event.delta.text };
   const content = event.message?.content ?? event.content;
@@ -62,8 +64,8 @@ export const grokAdapter: RuntimeAdapter = {
     if (agent.sessionId) args.push("--resume", agent.sessionId); else args.push("--session-id", sessionId);
     args.push("-p", prompt);
     const child = spawnRuntime(executable, args, agent.cwd ?? process.cwd()); child.stdin.end(); sink({ type: "response.started" }); if (!agent.sessionId) sink({ type: "session.bound", sessionId });
-    let stderr = ""; let text = "";
-    const parser = parseJsonLines((event) => { const next = eventText(event); if (!next) return; text = next.mode === "delta" ? text + next.text : next.text; sink({ type: "response.delta", text }); });
+    let stderr = ""; let text = ""; let newSegment = false;
+    const parser = parseJsonLines((event) => { if (event.type === "tool_call") { newSegment = true; return; } const next = eventText(event); if (!next || !next.text) return; text = next.mode === "delta" ? appendSegment(text, next.text, newSegment) : next.text; newSegment = false; sink({ type: "response.delta", text }); });
     child.stdout.on("data", (chunk: Buffer) => parser.push(chunk)); child.stderr.on("data", (chunk: Buffer) => { stderr += chunk; });
     const completion = new Promise<RuntimeInvocationResult>((resolve, reject) => { child.on("error", reject); child.on("close", (code) => { parser.flush(); if (code === 0 && text) resolve({ text, sessionId, metadata: { runtime: "grok", model: agent.model, sessionId, safety: "read-only" } }); else reject(grokFailure(stderr, code)); }); });
     return supervise("grok", child, completion, sink, timeoutMs);

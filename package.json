@@ -14,7 +14,7 @@
     "typecheck": "tsc -b --pretty false",
     "test": "node --import tsx --test src/server/*.test.ts src/server/runtimes/*.test.ts",
     "test:mcp": "node scripts/smoke-mcp.mjs",
-    "validate:skill": "python3 \"${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py\" plugins/polychat/skills/council && python3 \"${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py\" plugins/polychat/skills/stage-polychat-demo",
+    "validate:skill": "python3 \"${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py\" plugins/polychat/skills/polychat && python3 \"${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py\" .agents/skills/stage-polychat-demo",
     "validate:plugin": "python3 \"${CODEX_HOME:-$HOME/.codex}/skills/.system/plugin-creator/scripts/validate_plugin.py\" plugins/polychat"
   },
   "dependencies": {

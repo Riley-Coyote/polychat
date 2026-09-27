@@ -14,6 +14,15 @@ const app = express();
 const preferredPort = Number(process.env.POLYCHAT_PORT ?? 4317);
 const host = "127.0.0.1";
 
+// Only this machine's own pages and tools may use the broker. The Host check stops a web page from
+// reaching it through a DNS name pointed at 127.0.0.1; the Origin check stops cross-site posts.
+const loopbackNames = new Set(["127.0.0.1", "localhost", "[::1]"]);
+function loopbackUrl(value: string) { try { const url = new URL(value); return url.protocol === "http:" && loopbackNames.has(url.hostname); } catch { return false; } }
+app.use((request, response, next) => {
+  const origin = request.headers.origin;
+  if (!loopbackUrl(`http://${request.headers.host ?? ""}`) || (origin !== undefined && !loopbackUrl(origin))) return response.status(403).json({ error: "Polychat only accepts requests from this machine." });
+  next();
+});
 app.use(express.json({ limit: "1mb" }));
 // Room documents and API responses are live state, never reusable port-cache entries.
 app.use((_request, response, next) => { response.setHeader("Cache-Control", "no-store"); next(); });

@@ -27,7 +27,9 @@ export const codexAdapter: RuntimeAdapter = {
   invoke({ agent, prompt, timeoutMs }, sink) {
     const executable = findExecutable("codex", "codex"); if (!executable) throw runtimeError("codex", "runtime_missing", "Codex is not installed.", false, descriptor.setupCommand);
     const modelArgs = agent.model && agent.model !== "current" ? ["--model", agent.model] : [];
-    const args = agent.sessionId ? ["exec", "resume", "--json", "-c", 'sandbox_mode="read-only"', ...modelArgs, agent.sessionId, prompt] : ["exec", "--json", ...modelArgs, "-s", "read-only", prompt];
+    // Codex refuses folders outside a Git repository unless told otherwise, to protect changes it can't
+    // undo. Polychat runs it read-only, so any project folder is safe to use.
+    const args = agent.sessionId ? ["exec", "resume", "--json", "--skip-git-repo-check", "-c", 'sandbox_mode="read-only"', ...modelArgs, agent.sessionId, prompt] : ["exec", "--json", "--skip-git-repo-check", ...modelArgs, "-s", "read-only", prompt];
     const child = spawnRuntime(executable, args, agent.cwd ?? process.cwd()); child.stdin.end(); sink({ type: "response.started" });
     let stderr = ""; let text = ""; let sessionId = agent.sessionId;
     const parser = parseJsonLines((event) => { if (event.type === "thread.started" && typeof event.thread_id === "string") { sessionId = event.thread_id; sink({ type: "session.bound", sessionId }); } if (event.type === "item.completed" && event.item?.type === "agent_message") { text = String(event.item.text ?? text); sink({ type: "response.delta", text }); } });

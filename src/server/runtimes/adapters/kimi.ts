@@ -52,13 +52,18 @@ export const kimiAdapter: RuntimeAdapter = {
     const executable = findExecutable("kimi-code", "kimi"); if (!executable) throw runtimeError("kimi-code", "runtime_missing", "Kimi Code is not installed.", false, descriptor.setupCommand);
     if (!hasAuth()) throw runtimeError("kimi-code", "runtime_unauthenticated", "Kimi Code is installed but not signed in.", false, descriptor.loginCommand);
     if (!seatbeltAvailable()) throw runtimeError("kimi-code", "runtime_unsupported", "Kimi requires macOS Seatbelt for read-only council turns.");
-    const cwd = agent.cwd ?? process.cwd(); const launch = sandboxedCommand(executable, cwd); const client = new AcpClient(launch.command, launch.args, cwd);
+    const cwd = agent.cwd ?? process.cwd(); const launch = sandboxedCommand(executable); const client = new AcpClient(launch.command, launch.args, cwd);
     let sessionId = agent.sessionId; let text = ""; let cancelled = false;
     client.onUpdate((update) => { const delta = chunkText(update); if (delta) { text += delta; sink({ type: "response.delta", text }); } });
     const completion = (async (): Promise<RuntimeInvocationResult> => {
       sink({ type: "response.started" });
       const initialized = await client.request("initialize", { protocolVersion: 1, clientCapabilities: { fs: { readTextFile: true, writeTextFile: false }, terminal: false } });
-      await client.request("authenticate", { methodId: "login" });
+      try { await client.request("authenticate", { methodId: "login" }); }
+      catch (error) {
+        // A credentials file can outlive the sign-in behind it, so the probe may say ready when Kimi won't.
+        if (/authenticat/i.test(error instanceof Error ? error.message : String(error))) throw runtimeError("kimi-code", "runtime_unauthenticated", `Kimi Code's sign-in has expired. Run \`${descriptor.loginCommand}\` in a terminal, then try again.`, false, descriptor.loginCommand);
+        throw error;
+      }
       let session: any;
       if (sessionId) {
         const canResume = Boolean(initialized.agentCapabilities?.sessionCapabilities?.resume);

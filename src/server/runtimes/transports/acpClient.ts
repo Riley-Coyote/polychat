@@ -1,5 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
+import { resolve, sep } from "node:path";
 import { createInterface } from "node:readline";
 
 type JsonObject = Record<string, any>;
@@ -9,9 +10,11 @@ export class AcpClient {
   private nextId = 1;
   private pending = new Map<number, { resolve: (value: any) => void; reject: (error: Error) => void; timer: NodeJS.Timeout }>();
   private updateHandler: (params: JsonObject) => void = () => undefined;
+  private readonly root: string;
   stderr = "";
 
   constructor(command: string, args: string[], cwd: string) {
+    this.root = realpathSync(cwd);
     this.child = spawn(command, args, { cwd, env: process.env, stdio: ["pipe", "pipe", "pipe"] }) as ChildProcessWithoutNullStreams;
     this.child.stderr.on("data", (chunk: Buffer) => { this.stderr += chunk.toString(); });
     const lines = createInterface({ input: this.child.stdout });
@@ -63,8 +66,7 @@ export class AcpClient {
         this.write({ jsonrpc: "2.0", id: message.id, result }); return;
       }
       if (message.method === "fs/read_text_file") {
-        const path = String(message.params?.path ?? "");
-        const text = readFileSync(path, "utf8");
+        const text = readFileSync(this.insideProject(String(message.params?.path ?? "")), "utf8");
         const line = Math.max(1, Number(message.params?.line ?? 1)); const limit = Math.max(1, Number(message.params?.limit ?? Number.MAX_SAFE_INTEGER));
         const content = text.split("\n").slice(line - 1, line - 1 + limit).join("\n");
         this.write({ jsonrpc: "2.0", id: message.id, result: { content } }); return;
@@ -73,6 +75,13 @@ export class AcpClient {
     } catch (error) {
       this.write({ jsonrpc: "2.0", id: message.id, error: { code: -32000, message: error instanceof Error ? error.message : String(error) } });
     }
+  }
+
+  // The broker reads files on the runtime's behalf, outside its sandbox, so it serves only the project folder.
+  private insideProject(requested: string) {
+    const target = realpathSync(resolve(this.root, requested));
+    if (target !== this.root && !target.startsWith(`${this.root}${sep}`)) throw new Error("Polychat lets this runtime read files only inside its project folder.");
+    return target;
   }
 
   private write(message: JsonObject) { this.child.stdin.write(`${JSON.stringify(message)}\n`); }

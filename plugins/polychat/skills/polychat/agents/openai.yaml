@@ -1,0 +1,4 @@
+interface:
+  display_name: "Polychat"
+  short_description: "Open a room where your real Codex, Claude, Grok, and Kimi agents talk together"
+  default_prompt: "Open a Polychat room with the relevant collaborators for this project."

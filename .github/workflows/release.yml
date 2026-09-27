@@ -23,8 +23,8 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run test:mcp
-      - run: npm run validate:skill
-      - run: npm run validate:plugin
+      # validate:skill and validate:plugin use Codex's local skill-creator tools, so they run on
+      # developer machines rather than on the CI runner.
       - run: test -f plugins/polychat/dist/polychat-server.cjs
       - run: test -f plugins/polychat/dist/polychat-mcp.cjs
       - if: startsWith(github.ref, 'refs/tags/v')

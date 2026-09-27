@@ -1,9 +1,9 @@
 ---
-name: council
-description: Convene a visible, saved collaboration room using real Codex, Claude Code, Grok Build, and Kimi Code runtimes. Use when the user invokes council, asks installed coding agents to discuss or brainstorm together, wants a model's project or exact session context, or wants to resume a prior Polychat room.
+name: polychat
+description: Open a visible, saved Polychat room where the user's real agent runtimes (Codex, Claude Code, Grok Build, Kimi Code) talk together in one transcript, each keeping its own project context and memory. Use when the user mentions Polychat, asks Codex, Claude, Grok, or Kimi to discuss, debate, or brainstorm together, wants another agent's project or exact session brought into the conversation, or wants to resume a saved Polychat room. Not for a simulated panel of perspectives inside a single session.
 ---
 
-# Council
+# Polychat
 
 Use Polychat as connective tissue between real runtime contexts. Keep the browser transcript visible and each participant's private memory distinct.
 
@@ -23,7 +23,7 @@ Use Polychat as connective tissue between real runtime contexts. Keep the browse
 5. Add peers with `configure_participant`. A participant is only a runtime, model, project directory, optional exact session, and display name.
 6. Call `open_room`. In Codex, prefer navigating the returned local URL with the in-app Browser tool when it is available; otherwise rely on the macOS browser opened by the tool.
 
-## Conduct the council
+## Conduct the meeting
 
 1. Post the agenda visibly as the live host with `send_message` and no recipients.
 2. Run two rounds by default. In each round, call `invoke_participant` once for each peer, sequentially, including mixed Claude, Codex, Grok, and Kimi rooms.
