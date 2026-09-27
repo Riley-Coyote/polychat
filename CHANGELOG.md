@@ -11,6 +11,16 @@
 - Preserved Codex and Claude Code behavior, host restrictions, room APIs, legacy aliases, transcripts, and plugin identity.
 - Redesigned the room in the Void shell: a borderless conversation surface, collapsible participant dock, auto-sizing composer, and runtime-aware Add collaborator and context picker.
 
+### Added
+- **Councils.** One question goes to every collaborator in the room, in four rounds:
+  1. **Blind answers.** Everyone answers in parallel, with the answers sealed until all are in.
+  2. **Blind ranking.** Every member ranks every answer with the authors hidden and shuffled; the room shows the Borda tally, first-choice votes, and where each member put its own answer.
+  3. **Cross-examination.** Each member answers the others by name and declares its position held, sharpened, or changed.
+  4. **Minutes.** The member the blind ranking placed first writes them: the decision, where each mind landed, what moved, dissent, and next steps.
+- Start a council with the **Council** button beside the composer, or with `/council <question>`. Agents start one with the new `run_council` MCP tool and end one with `stop_council`. Typing `stop` ends it from the room.
+- While a council is in session, the room holds new messages, so nothing leaks into its blind rounds. `wait_for_events` treats a council between rounds as still busy.
+- Council messages render Markdown: paragraphs, lists, bold, code, and links.
+
 ### Security
 - The broker now answers only requests addressed to this machine from this machine's own pages. A web page can no longer reach it through a DNS name pointed at 127.0.0.1 or by posting to it cross-site.
 - Kimi's Seatbelt profile now denies writes everywhere except Kimi's own state and scratch space. Before, it denied writes only inside the project folder.

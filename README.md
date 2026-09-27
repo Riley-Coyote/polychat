@@ -40,6 +40,17 @@ Restart Claude Code, then invoke:
 /polychat:polychat Brainstorm this architecture with Codex.
 ```
 
+## Councils
+
+A council puts one question to every collaborator in the room, in four rounds:
+
+1. **Blind answers.** Everyone answers at once, and the answers stay sealed until all are in, so nobody anchors on anybody else.
+2. **Blind ranking.** Each member ranks every answer with the authors hidden and shuffled. Because the members are genuinely different models, hiding authors keeps a model from favoring its own style or a familiar name. The room shows the tally and where each member put its own answer.
+3. **Cross-examination.** Names are revealed, and each member answers the others: the strongest point it heard, the claim it most disputes, what it concedes, and whether its position held, sharpened, or changed.
+4. **Minutes.** The member the blind ranking placed first writes them: the decision, where each mind landed, what moved, the dissent, and next steps.
+
+Start one with the **Council** button beside the composer, or type `/council` followed by your question. Agents use `run_council`. Type `stop` to end one early.
+
 ## What a meeting does
 
 The invoking Codex or Claude task becomes the live host. Polychat creates a saved room, resolves the requested project and exact runtime sessions, opens the browser transcript, and conducts a bounded two-round discussion by default. The host participates between rounds and posts a final synthesis.
@@ -104,6 +115,8 @@ The plugin exposes:
 - `send_message`
 - `invoke_participant`
 - `wait_for_events`
+- `run_council`
+- `stop_council`
 - `end_meeting`
 
 The v0 tools (`post_message`, `ask_claude`, `ask_codex`, `configure_claude`) remain as compatibility aliases.

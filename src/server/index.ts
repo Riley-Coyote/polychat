@@ -2,7 +2,8 @@ import express from "express";
 import { execFile } from "node:child_process";
 import { existsSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
-import { createAgent, createMessage, createRoom, dataDir, getAgent, getRoom, listAgents, listMessages, listRooms, removeAgentFromRoom, updateAgent, updateRoom } from "./db.js";
+import { createAgent, createMessage, createRoom, dataDir, getAgent, getRoom, listAgents, listCouncils, listMessages, listRooms, removeAgentFromRoom, updateAgent, updateRoom } from "./db.js";
+import { activeCouncil, cancelCouncil, startCouncil } from "./council.js";
 import { currentCursor, publish, subscribe } from "./events.js";
 import { cancelAgents, invokeAgent } from "./runtime.js";
 import { listClaudeProjects, listClaudeSessions } from "./claudeContexts.js";
@@ -41,7 +42,7 @@ function roomState(roomId: string) {
     room = updateRoom(roomId, { meetingStatus: "complete", hostExpiresAt: null });
     publish(roomId, { type: "room.updated", room });
   }
-  return { room, agents: listAgents(roomId), messages: listMessages(roomId, 300), eventCursor: currentCursor() };
+  return { room, agents: listAgents(roomId), messages: listMessages(roomId, 300), councils: listCouncils(roomId, 20), eventCursor: currentCursor() };
 }
 
 function senderInRoom(roomId: string, senderId: string) {
@@ -68,15 +69,27 @@ function requestedTurns(content: string, recipients: number) {
   return Math.min(Math.max(recipients * 2, 2), 12);
 }
 
+const stopPhrase = /^\s*(?:stop|cancel|end)(?:\s+(?:the\s+)?(?:council|meeting|discussion))?[.!]?\s*$/i;
+
 function sendMessage(roomId: string, body: Record<string, unknown>) {
   const content = String(body.content ?? "").trim();
   const senderId = String(body.senderId ?? "riley");
   if (!content) throw new Error("Message content is required.");
   const sender = senderInRoom(roomId, senderId);
   if (!sender) throw new Error(`Unknown sender in this room: ${senderId}`);
+  // While a council is in session, the room holds still: new messages would leak into its blind rounds.
+  const council = activeCouncil(roomId);
+  if (council) {
+    const stop = stopPhrase.test(content);
+    if (sender.runtime === "human" && !stop) throw new Error("A council is in session. Type stop to end it, or wait for the minutes.");
+    const posted = createMessage({ roomId, senderId, content, metadata: { audience: "room", recipientAgentIds: [], stopRequested: stop } });
+    publish(roomId, { type: "message.created", message: posted });
+    if (stop) cancelCouncil(roomId, council.id);
+    return { ...posted, dispatchedAgentIds: [] as string[], dispatchErrors: [] as Array<{ agentId: string; error: string }>, queuedForMeeting: false, stopRequested: stop };
+  }
   const room = getRoom(roomId);
   const meetingInput = sender.runtime === "human" && room?.meetingStatus === "live";
-  const stopRequested = meetingInput && /^\s*(?:stop|cancel|end)(?:\s+(?:the\s+)?(?:council|meeting|discussion))?[.!]?\s*$/i.test(content);
+  const stopRequested = meetingInput && stopPhrase.test(content);
   const requested = Array.isArray(body.recipientAgentIds) ? body.recipientAgentIds.map(String) : sender.runtime === "human" ? listAgents(roomId).filter((agent) => agent.runtime !== "human" && agent.status !== "away").map((agent) => agent.id) : [];
   const recipientIds = [...new Set(requested)].filter((id) => id !== senderId);
   const message = createMessage({ roomId, senderId, content, metadata: { audience: body.audience === "direct" ? "direct" : "room", recipientAgentIds: recipientIds, queuedForMeeting: meetingInput && !stopRequested, stopRequested } });
@@ -109,6 +122,9 @@ app.patch("/api/rooms/:roomId", (request, response) => { try { const patch = { .
 
 app.get("/api/rooms/:roomId/events", (request, response) => { if (!getRoom(request.params.roomId)) return response.status(404).end(); response.setHeader("Content-Type", "text/event-stream"); response.setHeader("Cache-Control", "no-cache"); response.setHeader("Connection", "keep-alive"); response.flushHeaders(); const after = Number(request.query.after ?? request.headers["last-event-id"] ?? 0); subscribe(request.params.roomId, response, Number.isFinite(after) ? after : 0); request.on("close", () => response.end()); });
 app.post("/api/rooms/:roomId/messages", (request, response) => { try { const result = sendMessage(request.params.roomId, request.body ?? {}); response.status(result.dispatchedAgentIds.length ? 202 : 201).json(result); } catch (error) { response.status(400).json({ error: error instanceof Error ? error.message : String(error) }); } });
+
+app.post("/api/rooms/:roomId/councils", (request, response) => { try { if (!getRoom(request.params.roomId)) return response.status(404).json({ error: "Room not found." }); const council = startCouncil(request.params.roomId, { question: String(request.body?.question ?? ""), agentIds: Array.isArray(request.body?.agentIds) ? request.body.agentIds.map(String) : undefined, senderId: typeof request.body?.senderId === "string" ? request.body.senderId : undefined }); response.status(202).json({ council, eventCursor: currentCursor() }); } catch (error) { response.status(409).json({ error: error instanceof Error ? error.message : String(error) }); } });
+app.delete("/api/rooms/:roomId/councils/:councilId", (request, response) => { const council = cancelCouncil(request.params.roomId, request.params.councilId); council ? response.json(council) : response.status(404).json({ error: "No council in session with that id." }); });
 
 app.post("/api/rooms/:roomId/participants", (request, response) => {
   try {

@@ -49,5 +49,5 @@ export const showcaseState: RoomState = {
   },
   agents,
   messages,
-  eventCursor: 7,
+  councils: [], eventCursor: 7,
 };

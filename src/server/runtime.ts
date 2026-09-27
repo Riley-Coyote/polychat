@@ -9,8 +9,14 @@ const activeInvocations = new Map<string, RunningInvocation>();
 const activeSessions = new Set<string>();
 const turnTimeoutMs = Number(process.env.POLYCHAT_TURN_TIMEOUT_MS ?? 30 * 60 * 1000);
 
-function roomPrompt(roomId: string, agent: Agent, directPrompt: string, senderName: string) {
-  const visibleMessages = listMessages(roomId, 60).filter((message) => message.status !== "streaming");
+export interface InvokeOptions {
+  // Messages to leave out of this turn's transcript, e.g. a council's own messages while its members rank blind.
+  hideMessage?: (message: ChatMessage) => boolean;
+  metadata?: Record<string, unknown>;
+}
+
+function roomPrompt(roomId: string, agent: Agent, directPrompt: string, senderName: string, hideMessage?: InvokeOptions["hideMessage"]) {
+  const visibleMessages = listMessages(roomId, 60).filter((message) => message.status !== "streaming" && !hideMessage?.(message));
   const last = visibleMessages.at(-1);
   if (last?.senderName === senderName && last.content.trim() === directPrompt.trim()) visibleMessages.pop();
   const transcript = visibleMessages.map((message) => `${message.senderName}: ${message.content}`).join("\n\n");
@@ -37,17 +43,17 @@ function runtimeFailure(agent: Agent, error: unknown): StructuredRuntimeError {
   return { code: "process_failed", runtime: isRuntimeId(agent.runtime) ? agent.runtime : "codex", message: error instanceof Error ? error.message : String(error), retryable: true };
 }
 
-export function invokeAgent(roomId: string, agent: Agent, directPrompt: string, senderName = "Human", timeoutMs = turnTimeoutMs) {
+export function invokeAgent(roomId: string, agent: Agent, directPrompt: string, senderName = "Human", timeoutMs = turnTimeoutMs, options: InvokeOptions = {}) {
   if (!isRuntimeId(agent.runtime)) throw new Error("A human participant cannot be invoked as a runtime.");
   if (!listAgents(roomId).some((member) => member.id === agent.id)) throw new Error("The participant does not belong to this room.");
   if (activeRuns.has(agent.id)) throw new Error(`${agent.name} is already responding.`);
   const sessionKey = agent.sessionId ? `${agent.runtime}:${agent.sessionId}` : null;
   if (sessionKey && activeSessions.has(sessionKey)) throw new Error("This runtime session is already responding in another room. Use a separate session or wait for it to finish.");
-  const placeholder = createMessage({ roomId, senderId: agent.id, status: "streaming", metadata: { runtime: agent.runtime } });
+  const placeholder = createMessage({ roomId, senderId: agent.id, status: "streaming", metadata: { runtime: agent.runtime, ...options.metadata } });
   publish(roomId, { type: "message.created", message: placeholder });
   publish(roomId, { type: "agent.updated", agent: updateAgent(agent.id, { status: "thinking" }) });
   const adapter = getRuntimeAdapter(agent.runtime);
-  const prompt = roomPrompt(roomId, agent, directPrompt, senderName);
+  const prompt = roomPrompt(roomId, agent, directPrompt, senderName, options.hideMessage);
   let invocation: RunningInvocation;
   const heldSessions = new Set<string>();
   const holdSession = (id: string) => { const key = `${agent.runtime}:${id}`; activeSessions.add(key); heldSessions.add(key); };
@@ -63,7 +69,7 @@ export function invokeAgent(roomId: string, agent: Agent, directPrompt: string, 
   } catch (error) {
     for (const key of heldSessions) activeSessions.delete(key);
     const detail = runtimeFailure(agent, error);
-    const message = updateMessage(placeholder.id, { content: `Runtime error: ${detail.message}`, status: "error", metadata: { error: detail } });
+    const message = updateMessage(placeholder.id, { content: `Runtime error: ${detail.message}`, status: "error", metadata: { ...placeholder.metadata, error: detail } });
     publish(roomId, { type: "message.updated", message });
     publish(roomId, { type: "agent.updated", agent: updateAgent(agent.id, { status: "available" }) });
     return { placeholder, completion: Promise.resolve(message) };
@@ -71,11 +77,11 @@ export function invokeAgent(roomId: string, agent: Agent, directPrompt: string, 
   activeInvocations.set(agent.id, invocation);
   const run = invocation.completion.then((result) => {
     if (result.sessionId && result.sessionId !== agent.sessionId) publish(roomId, { type: "agent.updated", agent: updateAgent(agent.id, { sessionId: result.sessionId }) });
-    const message = updateMessage(placeholder.id, { content: result.text.trim(), status: "complete", metadata: result.metadata });
+    const message = updateMessage(placeholder.id, { content: result.text.trim(), status: "complete", metadata: { ...placeholder.metadata, ...result.metadata } });
     publish(roomId, { type: "message.updated", message }); return message;
   }).catch((error) => {
     const detail = runtimeFailure(agent, error);
-    const message = updateMessage(placeholder.id, { content: `Runtime error: ${detail.message}`, status: "error", metadata: { error: detail } });
+    const message = updateMessage(placeholder.id, { content: `Runtime error: ${detail.message}`, status: "error", metadata: { ...placeholder.metadata, error: detail } });
     publish(roomId, { type: "message.updated", message }); return message;
   }).finally(() => {
     publish(roomId, { type: "agent.updated", agent: updateAgent(agent.id, { status: "available" }) });

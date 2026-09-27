@@ -21213,6 +21213,9 @@ function commandVersion(command) {
     return null;
   }
 }
+function councilInSession(state) {
+  return (state.councils ?? []).some((council) => ["blind", "ranking", "responding", "minutes"].includes(council.phase));
+}
 var runtimeSchema = external_exports.enum(["claude-code", "codex", "grok", "kimi-code"]);
 var server = new McpServer({ name: "polychat", version: "1.1.0" });
 server.registerTool("polychat_doctor", { title: "Check Polychat", description: "Check the local Polychat broker, host requirements, and explicitly required runtimes.", annotations: { readOnlyHint: true }, inputSchema: { requiredRuntimes: external_exports.array(runtimeSchema).default([]) } }, async ({ requiredRuntimes }) => {
@@ -21247,7 +21250,10 @@ server.registerTool("read_room", { title: "Read a Polychat room", description: "
   const state = await request(`/api/rooms/${roomId}`);
   state.messages = state.messages.slice(-limit);
   const transcript = state.messages.map((message) => `${message.senderName}: ${message.content || `[${message.status}]`}`).join("\n\n");
-  return result(`${state.room.name}
+  const council = state.councils?.at(-1);
+  const councilLine = council ? `
+Latest council: ${council.phase}${council.error ? ` (${council.error})` : ""}` : "";
+  return result(`${state.room.name}${councilLine}
 ${transcript || "No messages yet."}`, state);
 });
 server.registerTool("search_contexts", { title: "Search runtime contexts", description: "Search real runtime projects and optionally list exact resumable sessions.", annotations: { readOnlyHint: true }, inputSchema: { runtime: runtimeSchema, query: external_exports.string().default(""), projectId: external_exports.string().optional(), limit: external_exports.number().int().min(1).max(80).default(32) } }, async ({ runtime, query, projectId, limit }) => {
@@ -21285,13 +21291,21 @@ server.registerTool("wait_for_events", { title: "Wait for room activity", descri
   do {
     state = await request(`/api/rooms/${roomId}`);
     const changed2 = state.eventCursor > after;
-    const busy = state.agents.some((agent) => agent.status === "thinking") || state.messages.some((message) => message.status === "streaming");
+    const busy = state.agents.some((agent) => agent.status === "thinking") || state.messages.some((message) => message.status === "streaming") || councilInSession(state);
     if (changed2 && (!untilSettled || !busy)) break;
     await delay(350);
   } while (Date.now() < deadline);
   const changed = state.eventCursor > after;
-  const settled = !state.agents.some((agent) => agent.status === "thinking") && !state.messages.some((message) => message.status === "streaming");
+  const settled = !state.agents.some((agent) => agent.status === "thinking") && !state.messages.some((message) => message.status === "streaming") && !councilInSession(state);
   return result(changed ? settled ? "Room response complete." : "Room activity received; a participant is still responding." : "No new room activity before timeout.", { ...state, changed, settled });
+});
+server.registerTool("run_council", { title: "Run a council", description: "Put one question to the room's collaborators as a structured council: blind answers in parallel, sealed until everyone is in; a blind ranking of every answer with the authors hidden; a named cross-examination round; and minutes written by the member the blind ranking placed first. Use it for decisions and hard questions with two or more collaborators. The council posts the question itself. Then call wait_for_events until it settles, and read_room for the minutes.", inputSchema: { roomId: external_exports.string(), question: external_exports.string().min(1), agentIds: external_exports.array(external_exports.string()).optional(), senderId: external_exports.string().default(participantId) } }, async ({ roomId, ...body }) => {
+  const data = await request(`/api/rooms/${roomId}/councils`, { method: "POST", body: JSON.stringify(body) });
+  return result(`Council convened with ${data.council.agentIds.length} minds; the blind round is underway.`, { roomId, ...data, url: `${baseUrl()}/?room=${roomId}` });
+});
+server.registerTool("stop_council", { title: "Stop a council", description: "End the council in session in a room, cancelling any member still answering.", inputSchema: { roomId: external_exports.string(), councilId: external_exports.string() } }, async ({ roomId, councilId }) => {
+  const council = await request(`/api/rooms/${roomId}/councils/${councilId}`, { method: "DELETE" });
+  return result("Council stopped.", { roomId, council });
 });
 server.registerTool("end_meeting", { title: "End a live council", description: "Mark the invoking host away and complete or cancel the bounded meeting.", inputSchema: { roomId: external_exports.string(), cancel: external_exports.boolean().default(false) } }, async ({ roomId, cancel }) => {
   const room = await request(`/api/rooms/${roomId}/meeting?cancel=${cancel}`, { method: "DELETE" });

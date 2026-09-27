@@ -3,11 +3,12 @@ import type { Agent, ChatMessage, Room, RoomEvent, RoomState } from "../shared/t
 import { AddCollaborator } from "./AddCollaborator";
 import { AgentMark } from "./AgentMark";
 import { ContextPicker } from "./ContextPicker";
+import { CouncilGlyph, CouncilOpening, MarkdownLite, Minutes, RankingBlock, councilInSession, phaseLabel } from "./Council";
 import { guidedInitialState, guidedOpusResponse, guidedTurns } from "./guidedDemo";
 import { showcaseState } from "./showcase";
 
 const emptyRoom: Room = { id: "", name: "Loading room", projectCwd: null, meetingStatus: "idle", hostAgentId: null, hostExpiresAt: null, archivedAt: null, createdAt: "", updatedAt: "" };
-const initialState: RoomState = { room: emptyRoom, agents: [], messages: [], eventCursor: 0 };
+const initialState: RoomState = { room: emptyRoom, agents: [], messages: [], councils: [], eventCursor: 0 };
 const runtimeLabel: Record<Agent["runtime"], string> = { human: "Human", codex: "Codex", "claude-code": "Claude Code", grok: "Grok Build", "kimi-code": "Kimi Code" };
 const modelNames: Record<string, string> = { opus: "Opus", fable: "Fable", sonnet: "Sonnet", "gpt-5.6-sol": "GPT Sol", "gpt-5.6-terra": "GPT Terra", current: "Configured model" };
 
@@ -60,6 +61,9 @@ export function App() {
   const runtimeAgents = useMemo(() => state.agents.filter((agent) => agent.runtime !== "human" && agent.status !== "away"), [state.agents]);
   const inspectedAgent = state.agents.find((agent) => agent.id === inspectedAgentId) ?? state.agents.find((agent) => agent.runtime !== "human");
   const recipient = recipientId === "all" ? undefined : runtimeAgents.find((agent) => agent.id === recipientId);
+  const councilById = useMemo(() => new Map(state.councils.map((council) => [council.id, council])), [state.councils]);
+  const sessionCouncil = state.councils.find(councilInSession);
+  const humanId = state.agents.find((agent) => agent.runtime === "human")?.id ?? "riley";
 
   async function loadRooms(preferred?: string) {
     const response = await fetch("/api/rooms"); const data = await response.json(); const next = data.rooms as Room[]; setRooms(next);
@@ -81,7 +85,7 @@ export function App() {
     fetch(`/api/rooms/${roomId}`).then(async (response) => { if (!response.ok) throw new Error("Room unavailable"); return response.json(); }).then((next) => { setState(next); setConnection("live"); }).catch(() => setConnection("offline"));
     const events = new EventSource(`/api/rooms/${roomId}/events`);
     events.addEventListener("open", () => setConnection("live")); events.addEventListener("error", () => setConnection("offline"));
-    events.addEventListener("room", (raw) => { const event = JSON.parse((raw as MessageEvent).data) as RoomEvent; setState((current) => { if (event.type === "room.updated") return { ...current, room: event.room, eventCursor: event.eventId }; if (event.type === "agent.updated") return { ...current, agents: upsert(current.agents, event.agent), eventCursor: event.eventId }; if (event.type === "agent.removed") return { ...current, agents: current.agents.filter((agent) => agent.id !== event.agentId), eventCursor: event.eventId }; if (event.type === "message.created" || event.type === "message.updated") return { ...current, messages: upsert(current.messages, event.message), eventCursor: event.eventId }; return { ...current, eventCursor: event.eventId }; }); });
+    events.addEventListener("room", (raw) => { const event = JSON.parse((raw as MessageEvent).data) as RoomEvent; setState((current) => { if (event.type === "room.updated") return { ...current, room: event.room, eventCursor: event.eventId }; if (event.type === "agent.updated") return { ...current, agents: upsert(current.agents, event.agent), eventCursor: event.eventId }; if (event.type === "agent.removed") return { ...current, agents: current.agents.filter((agent) => agent.id !== event.agentId), eventCursor: event.eventId }; if (event.type === "message.created" || event.type === "message.updated") return { ...current, messages: upsert(current.messages, event.message), eventCursor: event.eventId }; if (event.type === "council.updated") return { ...current, councils: upsert(current.councils, event.council), eventCursor: event.eventId }; return { ...current, eventCursor: event.eventId }; }); });
     return () => events.close();
   }, [presentation, roomId]);
   useEffect(() => {
@@ -106,7 +110,9 @@ export function App() {
   useEffect(() => { if (recipientId !== "all" && !runtimeAgents.some((agent) => agent.id === recipientId)) setRecipientId("all"); }, [recipientId, runtimeAgents]);
 
   async function send(event: FormEvent) {
-    event.preventDefault(); const content = draft.trim(); if (!content || !roomId) return; setDraft(""); setError(null);
+    event.preventDefault(); const content = draft.trim(); if (!content || !roomId) return;
+    const councilCommand = content.match(/^\/council\s+([\s\S]+)/i); if (councilCommand) { await convene(councilCommand[1].trim()); return; }
+    setDraft(""); setError(null);
     if (showcase) return;
     const recipients = recipient ? [recipient] : runtimeAgents;
     if (!recipients.length) { setError("Add an available collaborator before sending."); return; }
@@ -125,8 +131,37 @@ export function App() {
       }
       return;
     }
-    try { const response = await fetch(`/api/rooms/${roomId}/messages`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ senderId: state.agents.find((agent) => agent.runtime === "human")?.id ?? "riley", content, audience: recipient ? "direct" : "room", recipientAgentIds: recipients.map((agent) => agent.id), discussion: recipients.length > 1 && /\b(council|brainstorm|discuss|talk|rounds?|turns?)\b/i.test(content) }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error); if (data.dispatchErrors?.length) throw new Error(data.dispatchErrors.map((item: any) => item.error).join(" · ")); }
+    try { const response = await fetch(`/api/rooms/${roomId}/messages`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ senderId: state.agents.find((agent) => agent.runtime === "human")?.id ?? "riley", content, audience: recipient ? "direct" : "room", recipientAgentIds: recipients.map((agent) => agent.id), discussion: recipients.length > 1 && /\b(brainstorm|discuss|talk|rounds?|turns?)\b/i.test(content) }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error); if (data.dispatchErrors?.length) throw new Error(data.dispatchErrors.map((item: any) => item.error).join(" · ")); }
     catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }
+  }
+
+  // A council puts one question to every available collaborator: blind answers, a blind ranking, cross-examination, minutes.
+  async function convene(question: string) {
+    if (!question || !roomId || showcase) return; setError(null);
+    if (runtimeAgents.length < 2) { setError("A council needs at least two available collaborators."); return; }
+    setDraft("");
+    try { const response = await fetch(`/api/rooms/${roomId}/councils`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ question, senderId: humanId, agentIds: runtimeAgents.map((agent) => agent.id) }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error); }
+    catch (caught) { setDraft(question); setError(caught instanceof Error ? caught.message : String(caught)); }
+  }
+
+  function renderMessages() {
+    const rankingShown = new Set<string>();
+    return state.messages.map((message) => {
+      const council = typeof message.metadata.councilId === "string" ? councilById.get(message.metadata.councilId) : undefined;
+      const role = message.metadata.councilRole;
+      const time = timeLabel(message.createdAt);
+      if (council && role === "question") return <CouncilOpening key={message.id} message={message} council={council} agents={state.agents} time={time} />;
+      if (council && role === "ranking") {
+        if (rankingShown.has(council.id)) return null;
+        rankingShown.add(council.id);
+        return <RankingBlock key={message.id} council={council} ballots={state.messages.filter((item) => item.metadata.councilId === council.id && item.metadata.councilRole === "ranking")} agents={state.agents} />;
+      }
+      if (role === "minutes") return <Minutes key={message.id} message={message} council={council} agents={state.agents} time={time} />;
+      const sealed = role === "blind" && message.metadata.sealed === true && council?.phase === "blind" && message.status !== "error";
+      const badge = role === "blind" ? "Blind answer" : role === "response" ? "Cross-examination" : undefined;
+      const position = role === "response" ? council?.results.positions?.[message.senderId] : undefined;
+      return <Message key={message.id} message={message} agents={state.agents} badge={badge} sealed={sealed} position={position} />;
+    });
   }
 
   async function renameRoom() { const name = window.prompt("Room name", state.room.name)?.trim(); if (!name) return; const response = await fetch(`/api/rooms/${roomId}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ name }) }); if (response.ok) { const room = await response.json(); setRooms((items) => upsert(items, room)); setState((current) => ({ ...current, room })); } }
@@ -161,12 +196,12 @@ export function App() {
         </aside>
 
         <main className="conversation">
-          <div className="room-status-line"><span className={`meeting-state ${state.room.meetingStatus}`}>{state.room.meetingStatus === "live" ? "Council live" : state.room.meetingStatus === "complete" ? "Council complete" : state.room.meetingStatus === "cancelled" ? "Council stopped" : "Room ready"}</span><span>{state.room.projectCwd ? shortPath(state.room.projectCwd) : "No shared project binding"}</span></div>
-          <div className="transcript" ref={transcriptRef}>{state.messages.length ? state.messages.map((message) => <Message key={message.id} message={message} agents={state.agents} />) : <EmptyRoom hasCollaborators={runtimeAgents.length > 0} onAdd={() => setAddOpen(true)} />}</div>
+          <div className="room-status-line"><span className={`meeting-state ${sessionCouncil ? "live" : state.room.meetingStatus}`}>{sessionCouncil ? `Council · ${phaseLabel(sessionCouncil)}` : state.room.meetingStatus === "live" ? "Meeting live" : state.room.meetingStatus === "complete" ? "Meeting complete" : state.room.meetingStatus === "cancelled" ? "Meeting stopped" : "Room ready"}</span><span>{state.room.projectCwd ? shortPath(state.room.projectCwd) : "No shared project binding"}</span></div>
+          <div className="transcript" ref={transcriptRef}>{state.messages.length ? renderMessages() : <EmptyRoom hasCollaborators={runtimeAgents.length > 0} onAdd={() => setAddOpen(true)} />}</div>
           <div className="composer-wrap">{error && <div className="composer-error" role="alert">{error}</div>}<form className="composer" onSubmit={send}>
             <div className="composer-input-row">
               <button className="composer-add" type="button" aria-label="Add collaborator" onClick={() => !showcase && setAddOpen(true)} disabled={showcase}>+</button>
-              <textarea ref={composerRef} aria-label={recipient ? `Message ${recipient.name}` : "Message the room"} value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder={recipient ? `Message ${recipient.name}…` : "Message the room…"} rows={1} />
+              <textarea ref={composerRef} aria-label={recipient ? `Message ${recipient.name}` : "Message the room"} value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} placeholder={sessionCouncil ? "Council in session. Type stop to end it." : recipient ? `Message ${recipient.name}…` : "Message the room…"} rows={1} />
               <button className="send-button" aria-label="Send message" disabled={!draft.trim() || !runtimeAgents.length || showcase}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5m-6 6 6-6 6 6" /></svg></button>
             </div>
             <div className="composer-toolbar">
@@ -174,6 +209,7 @@ export function App() {
               {recipientMenuOpen && <div className="recipient-menu"><button className={recipientId === "all" ? "selected" : ""} onClick={() => { setRecipientId("all"); setRecipientMenuOpen(false); }} type="button"><RecipientMark agents={runtimeAgents} /><span><strong>Everyone</strong><small>Invite the whole room</small></span></button>{runtimeAgents.map((agent) => <button key={agent.id} className={recipientId === agent.id ? "selected" : ""} onClick={() => { setRecipientId(agent.id); setRecipientMenuOpen(false); }} type="button"><RecipientMark agents={runtimeAgents} recipient={agent} /><span><strong>{agent.name}</strong><small>{modelLabel(agent)}</small></span></button>)}</div>}
             </div>
               <span className="composer-audience-status">{recipient ? `Only ${recipient.name} responds` : `${runtimeAgents.length} available`}</span>
+              <button type="button" className="council-trigger" onClick={() => void convene(draft.trim())} disabled={!draft.trim() || runtimeAgents.length < 2 || Boolean(sessionCouncil) || showcase} title="Put this to everyone as a council: blind answers, a blind ranking, cross-examination, and minutes."><CouncilGlyph /><span>Council</span></button>
               <span className="composer-key-hint">↵ to send <span>· Shift ↵ for a new line</span></span>
             </div>
           </form></div>
@@ -187,11 +223,11 @@ export function App() {
   );
 }
 
-function Message({ message, agents }: { message: ChatMessage; agents: Agent[] }) {
+function Message({ message, agents, badge, sealed, position }: { message: ChatMessage; agents: Agent[]; badge?: string; sealed?: boolean; position?: string }) {
   const recipientIds = Array.isArray(message.metadata.recipientAgentIds) ? message.metadata.recipientAgentIds.filter((id): id is string => typeof id === "string") : [];
   const recipientNames = recipientIds.map((id) => agents.find((agent) => agent.id === id)?.name).filter(Boolean);
   const audience = recipientNames.length > 1 ? "Everyone" : recipientNames[0];
-  return <article className={`message ${message.senderRuntime} ${message.status}`}><div className={`avatar ${message.senderRuntime}`}><AgentMark runtime={message.senderRuntime} fallback={message.senderName} /></div><div className="message-body"><header><strong>{message.senderName}</strong><span>{message.senderRuntime === "human" ? "You" : runtimeLabel[message.senderRuntime]}</span>{audience && <span className="message-audience">{audience}</span>}<time>{timeLabel(message.createdAt)}</time></header><div className="message-content">{message.content || <span className="thinking-copy">Thinking<span>…</span></span>}</div></div></article>;
+  return <article className={`message ${message.senderRuntime} ${message.status}${sealed ? " sealed" : ""}`}><div className={`avatar ${message.senderRuntime}`}><AgentMark runtime={message.senderRuntime} fallback={message.senderName} /></div><div className="message-body"><header><strong>{message.senderName}</strong><span>{message.senderRuntime === "human" ? "You" : runtimeLabel[message.senderRuntime]}</span>{badge && <span className="council-badge">{badge}</span>}{position && <span className="position-chip">{position.charAt(0) + position.slice(1).toLowerCase()}</span>}{audience && !badge && <span className="message-audience">{audience}</span>}<time>{timeLabel(message.createdAt)}</time></header><div className={`message-content${badge && message.content && !sealed ? " rendered" : ""}`}>{sealed ? <span className="sealed-answer"><i aria-hidden="true" />{message.status === "streaming" ? "Answering privately" : "Sealed until everyone has answered"}</span> : badge && message.content ? <MarkdownLite text={message.content} /> : message.content || <span className="thinking-copy">Thinking<span>…</span></span>}</div></div></article>;
 }
 function EmptyRoom({ hasCollaborators, onAdd }: { hasCollaborators: boolean; onAdd: () => void }) { return <div className="empty-room"><div className="empty-mark">P</div><h1>{hasCollaborators ? "The room is listening." : "A room with actual continuity."}</h1><p>{hasCollaborators ? "Send a message to one collaborator or convene everyone for a council." : "Add a real Claude, Codex, Grok, or Kimi collaborator, then speak to one mind or convene the room."}</p>{!hasCollaborators && <button onClick={onAdd}>Add the first collaborator</button>}</div>; }
 function RecipientMark({ agents, recipient }: { agents: Agent[]; recipient?: Agent }) { if (recipient) return <span className={`recipient-mark avatar ${recipient.runtime}`}><AgentMark runtime={recipient.runtime} fallback={recipient.name} /></span>; return <span className="recipient-stack">{agents.slice(0, 3).map((agent) => <span key={agent.id} className={`avatar ${agent.runtime}`}><AgentMark runtime={agent.runtime} fallback={agent.name} /></span>)}</span>; }

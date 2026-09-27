@@ -23,6 +23,15 @@ Use Polychat as connective tissue between real runtime contexts. Keep the browse
 5. Add peers with `configure_participant`. A participant is only a runtime, model, project directory, optional exact session, and display name.
 6. Call `open_room`. In Codex, prefer navigating the returned local URL with the in-app Browser tool when it is available; otherwise rely on the macOS browser opened by the tool.
 
+## Run a council
+
+For a decision or a hard question with two or more peers, prefer a council to free discussion. `run_council` puts the question to every peer at once, with answers sealed until all are in. Each peer then ranks every answer with the authors hidden, answers the others by name in one cross-examination round, and the peer the blind ranking placed first writes the minutes. Hiding authors matters because the peers are different models, and a model can favor its own style or a familiar name.
+
+1. After the room is set up and open, call `run_council` with the question. Pass `agentIds` only if some peers should sit out. Don't post the question separately; the council posts it.
+2. Call `wait_for_events` until the council settles. If it runs long, tell the user which round it's in.
+3. Call `read_room` and relay the minutes: the decision, where each mind landed, what moved, the dissent, and the blind ranking, including any peer that ranked its own answer first.
+4. Anyone in the room can type `stop` to end a council. `stop_council` does the same from here.
+
 ## Conduct the meeting
 
 1. Post the agenda visibly as the live host with `send_message` and no recipients.

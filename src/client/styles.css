@@ -644,3 +644,89 @@ button.context-danger { min-height: 38px; color: #da9c9c; }
   .composer-audience-status { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .composer-key-hint { display: none; }
 }
+
+/* Council: blind answers, blind ranking, cross-examination, minutes.
+   Tonal surfaces in the Void palette; the room's live green is the only signal. */
+.transcript { --council-indent: 40px; }
+.council-rail { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 14px 0 0; padding: 0; list-style: none; font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.council-rail li { display: flex; align-items: center; gap: 7px; }
+.council-rail i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: .45; }
+.council-rail li.done { color: var(--muted); }
+.council-rail li.done i { opacity: 1; }
+.council-rail li.active { color: var(--text); }
+.council-rail li.active i { background: #74b596; opacity: 1; animation: breathe 1.8s ease-in-out infinite; }
+.council-rail li.stopped { color: var(--muted); }
+.council-members { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; font-size: 11px; color: var(--muted); }
+.council-member { display: flex; align-items: center; gap: 6px; }
+.council-member .avatar { width: 20px; height: 20px; --agent-mark-size: 14px; }
+.council-note { margin: 12px 0 0; font-size: 12px; line-height: 1.6; color: var(--muted); }
+
+.council-badge { color: var(--faint); }
+.position-chip { padding: 1px 8px; border-radius: 999px; background: #111112; color: var(--muted); }
+.sealed-answer { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px; background: #0a0a0b; color: var(--faint); font-size: 12px; line-height: 1.4; }
+.sealed-answer i { flex: 0 0 6px; height: 6px; border-radius: 50%; background: #3a3b3d; }
+.message.sealed.streaming .sealed-answer i { background: var(--muted); animation: breathe 1.8s ease-in-out infinite; }
+.message.sealed.complete .sealed-answer i { background: #74b596; }
+
+.council-block { margin: 4px 0 20px var(--council-indent); padding: 16px 18px; border-radius: 12px; background: #0a0a0b; }
+.council-block > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 14px; }
+.council-block > header small { font-size: 11px; color: var(--faint); }
+.ranking-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.ranking-list li { display: grid; grid-template-columns: 12px 20px minmax(72px, max-content) minmax(40px, 1fr) auto; align-items: center; gap: 4px 10px; font-size: 13px; }
+.ranking-list .avatar { width: 20px; height: 20px; --agent-mark-size: 14px; }
+.rank-place { font-size: 11px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.rank-name { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rank-bar { height: 2px; border-radius: 2px; background: #161618; overflow: hidden; }
+.rank-bar > span { display: block; height: 100%; border-radius: inherit; background: #8d8f92; }
+.ranking-list li:first-child .rank-bar > span { background: #ebedef; }
+.rank-points { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ranking-list small { grid-column: 3 / -1; font-size: 11px; color: var(--faint); }
+.ranking-pending { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; font-size: 12px; color: var(--muted); }
+.ranking-pending li { display: flex; align-items: center; gap: 8px; }
+.ranking-pending li span { color: var(--faint); }
+.ranking-pending i { width: 5px; height: 5px; border-radius: 50%; background: #3a3b3d; }
+.ranking-pending li.streaming i { background: var(--muted); animation: breathe 1.8s ease-in-out infinite; }
+.ranking-pending li.complete i { background: #74b596; }
+.council-ballots { margin-top: 12px; }
+.council-ballots summary { width: max-content; font-size: 11px; color: var(--faint); cursor: pointer; }
+.council-ballots summary:hover { color: var(--text); }
+.ballot-key { margin: 10px 0 6px; font-size: 11px; color: var(--faint); }
+.ballot { margin-top: 10px; font-size: 12px; }
+.ballot strong { font-weight: 500; color: var(--muted); }
+.ballot pre { margin: 4px 0 0; white-space: pre-wrap; font: inherit; font-size: 12px; line-height: 1.6; color: var(--muted); }
+
+.council-minutes .message-body > header strong { letter-spacing: .01em; }
+.minutes-sheet { margin-top: 10px; padding: 18px 22px 16px; border-radius: 12px; background: #0a0a0b; color: #dddddf; font-size: 14px; line-height: 1.75; }
+.minutes-sheet h4 { margin: 20px 0 6px; font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.minutes-sheet h4:first-child { margin-top: 0; }
+.minutes-sheet p { margin: 0 0 8px; }
+.minutes-sheet ul, .minutes-sheet ol { margin: 0 0 8px; padding-left: 18px; }
+.minutes-sheet li { margin: 2px 0; }
+.minutes-sheet li::marker { color: var(--faint); }
+.minutes-sheet strong { font-weight: 500; color: var(--text); }
+.minutes-members { font-size: 11px; color: var(--faint); }
+.minutes-copy { margin-left: 2px; padding: 0 2px; border: 0; background: none; color: var(--faint); font: inherit; font-size: 10px; cursor: pointer; }
+.minutes-copy:hover { color: var(--text); }
+
+.composer-audience-status { margin-right: 0; }
+.council-trigger { display: flex; align-items: center; gap: 6px; height: 30px; margin-right: auto; padding: 3px 9px; border: 0; border-radius: 6px; background: none; color: var(--muted); font: inherit; font-size: 11px; cursor: pointer; transition: background-color 160ms ease, color 160ms ease; }
+.council-trigger:hover:not(:disabled) { background: #111112; color: var(--text); }
+.council-trigger:disabled { color: var(--faint); opacity: .55; cursor: default; }
+
+@media (max-width: 760px) { .transcript { --council-indent: 32px; } }
+@media (max-width: 460px) { .transcript { --council-indent: 0px; } .council-trigger span { display: none; } }
+@media (prefers-reduced-motion: reduce) { .council-rail li.active i, .message.sealed.streaming .sealed-answer i, .ranking-pending li.streaming i { animation: none; } }
+
+/* Council messages render their Markdown. */
+.message-content.rendered { white-space: normal; }
+.message-content.rendered p, .message-content.rendered ul, .message-content.rendered ol, .message-content.rendered pre, .minutes-sheet pre { margin: 0 0 12px; }
+.message-content.rendered > :last-child, .minutes-sheet > :last-child { margin-bottom: 0; }
+.message-content.rendered ul, .message-content.rendered ol { padding-left: 20px; }
+.message-content.rendered li::marker { color: var(--faint); }
+.message-content.rendered h4 { margin: 16px 0 6px; font-size: 10px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.message-content.rendered strong { font-weight: 500; color: var(--text); }
+.message-content.rendered code, .minutes-sheet code { padding: 1px 5px; border-radius: 4px; background: #111112; font: 12px/1.5 "SFMono-Regular", Consolas, monospace; }
+.message-content.rendered pre, .minutes-sheet pre { padding: 12px 14px; border-radius: 10px; background: #0a0a0b; white-space: pre-wrap; overflow-wrap: anywhere; }
+.message-content.rendered pre code, .minutes-sheet pre code { padding: 0; background: none; }
+.message-content.rendered a, .minutes-sheet a { color: var(--text); text-decoration: underline; text-decoration-color: #3a3b3d; text-underline-offset: 3px; }
+.message-content.rendered a:hover, .minutes-sheet a:hover { text-decoration-color: var(--muted); }

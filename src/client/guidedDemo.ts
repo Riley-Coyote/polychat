@@ -21,7 +21,7 @@ export const guidedInitialState: RoomState = {
   room: { id: "guided-polyphonic", name: "Polyphonic messaging performance", projectCwd: guidedProjectCwd, meetingStatus: "live", hostAgentId: "guided-sol", hostExpiresAt: null, archivedAt: null, createdAt: startedAt, updatedAt: startedAt },
   agents: guidedAgents,
   messages: [guidedOpeningMessage],
-  eventCursor: 1,
+  councils: [], eventCursor: 1,
 };
 
 export const guidedTurns: Array<{ id: string; senderId: string; content: string; pause: number }> = [

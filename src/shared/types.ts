@@ -98,10 +98,40 @@ export interface ChatMessage {
   updatedAt: string;
 }
 
+// A council runs in four phases: blind answers, a blind ranking with authors hidden, a named
+// cross-examination, and minutes written by the member the blind ranking placed first.
+export type CouncilPhase = "blind" | "ranking" | "responding" | "minutes" | "complete" | "cancelled" | "failed";
+export type CouncilMessageRole = "question" | "blind" | "ranking" | "response" | "minutes";
+export type CouncilPosition = "HELD" | "SHARPENED" | "CHANGED";
+
+export interface CouncilResults {
+  labels?: Record<string, string>;
+  ballots?: Record<string, string[]>;
+  points?: Record<string, number>;
+  order?: string[];
+  firstPlaceVotes?: Record<string, string[]>;
+  selfPreference?: string[];
+  positions?: Record<string, CouncilPosition>;
+}
+
+export interface Council {
+  id: string;
+  roomId: string;
+  question: string;
+  agentIds: string[];
+  phase: CouncilPhase;
+  results: CouncilResults;
+  chairAgentId: string | null;
+  error: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface RoomState {
   room: Room;
   agents: Agent[];
   messages: ChatMessage[];
+  councils: Council[];
   eventCursor: number;
 }
 
@@ -146,6 +176,7 @@ export type RoomEventPayload =
   | { type: "message.updated"; message: ChatMessage }
   | { type: "agent.updated"; agent: Agent }
   | { type: "agent.removed"; agentId: string }
+  | { type: "council.updated"; council: Council }
   | { type: "runtime.updated"; runtime: RuntimeCatalogEntry };
 
 export type RoomEvent = RoomEventPayload & { eventId: number; roomId: string };

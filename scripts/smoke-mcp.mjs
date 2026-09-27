@@ -16,7 +16,7 @@ try {
     "polychat_doctor", "list_runtimes", "list_rooms", "create_room", "open_room", "read_room",
     "search_contexts", "configure_participant", "remove_participant",
     "start_meeting", "send_message", "invoke_participant", "wait_for_events",
-    "end_meeting",
+    "run_council", "stop_council", "end_meeting",
   ];
   const missing = required.filter((name) => !tools.some((tool) => tool.name === name));
   if (missing.length) throw new Error(`Missing MCP tools: ${missing.join(", ")}`);

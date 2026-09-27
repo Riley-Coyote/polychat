@@ -16184,7 +16184,7 @@ var require_object_inspect = __commonJS({
         return inspect_(value, opts, depth + 1, seen);
       }
       if (typeof obj === "function" && !isRegExp(obj)) {
-        var name = nameOf(obj);
+        var name = nameOf2(obj);
         var keys = arrObjKeys(obj, inspect2);
         return "[Function" + (name ? ": " + name : " (anonymous)") + "]" + (keys.length > 0 ? " { " + $join.call(keys, ", ") + " }" : "");
       }
@@ -16363,7 +16363,7 @@ var require_object_inspect = __commonJS({
     function toStr(obj) {
       return objectToString.call(obj);
     }
-    function nameOf(f) {
+    function nameOf2(f) {
       if (f.name) {
         return f.name;
       }
@@ -16582,16 +16582,16 @@ var require_side_channel_list = __commonJS({
     "use strict";
     var inspect2 = require_object_inspect();
     var $TypeError = require_type();
-    var listGetNode = function(list, key, isDelete) {
-      var prev = list;
+    var listGetNode = function(list2, key, isDelete) {
+      var prev = list2;
       var curr;
       for (; (curr = prev.next) != null; prev = curr) {
         if (curr.key === key) {
           prev.next = curr.next;
           if (!isDelete) {
             curr.next = /** @type {NonNullable<typeof list.next>} */
-            list.next;
-            list.next = curr;
+            list2.next;
+            list2.next = curr;
           }
           return curr;
         }
@@ -19272,7 +19272,7 @@ var require_forwarded = __commonJS({
     }
     function parse(header) {
       var end = header.length;
-      var list = [];
+      var list2 = [];
       var start = header.length;
       for (var i = header.length - 1; i >= 0; i--) {
         switch (header.charCodeAt(i)) {
@@ -19283,7 +19283,7 @@ var require_forwarded = __commonJS({
             break;
           case 44:
             if (start !== end) {
-              list.push(header.substring(start, end));
+              list2.push(header.substring(start, end));
             }
             start = end = i;
             break;
@@ -19293,9 +19293,9 @@ var require_forwarded = __commonJS({
         }
       }
       if (start !== end) {
-        list.push(header.substring(start, end));
+        list2.push(header.substring(start, end));
       }
-      return list;
+      return list2;
     }
   }
 });
@@ -22233,7 +22233,7 @@ var require_fresh = __commonJS({
     }
     function parseTokenList(str) {
       var end = 0;
-      var list = [];
+      var list2 = [];
       var start = 0;
       for (var i = 0, len = str.length; i < len; i++) {
         switch (str.charCodeAt(i)) {
@@ -22243,7 +22243,7 @@ var require_fresh = __commonJS({
             }
             break;
           case 44:
-            list.push(str.substring(start, end));
+            list2.push(str.substring(start, end));
             start = end = i + 1;
             break;
           default:
@@ -22251,8 +22251,8 @@ var require_fresh = __commonJS({
             break;
         }
       }
-      list.push(str.substring(start, end));
-      return list;
+      list2.push(str.substring(start, end));
+      return list2;
     }
   }
 });
@@ -23325,13 +23325,13 @@ var require_send = __commonJS({
       return count > 0;
     }
     function normalizeList(val, name) {
-      var list = [].concat(val || []);
-      for (var i = 0; i < list.length; i++) {
-        if (typeof list[i] !== "string") {
+      var list2 = [].concat(val || []);
+      for (var i = 0; i < list2.length; i++) {
+        if (typeof list2[i] !== "string") {
           throw new TypeError(name + " must be array of strings or false");
         }
       }
-      return list;
+      return list2;
     }
     function parseHttpDate(date) {
       var timestamp = date && Date.parse(date);
@@ -23339,7 +23339,7 @@ var require_send = __commonJS({
     }
     function parseTokenList(str) {
       var end = 0;
-      var list = [];
+      var list2 = [];
       var start = 0;
       for (var i = 0, len = str.length; i < len; i++) {
         switch (str.charCodeAt(i)) {
@@ -23350,7 +23350,7 @@ var require_send = __commonJS({
             break;
           case 44:
             if (start !== end) {
-              list.push(str.substring(start, end));
+              list2.push(str.substring(start, end));
             }
             start = end = i + 1;
             break;
@@ -23360,9 +23360,9 @@ var require_send = __commonJS({
         }
       }
       if (start !== end) {
-        list.push(str.substring(start, end));
+        list2.push(str.substring(start, end));
       }
-      return list;
+      return list2;
     }
     function setHeaders(res, headers) {
       var keys = Object.keys(headers);
@@ -23413,7 +23413,7 @@ var require_vary = __commonJS({
     }
     function parse(header) {
       var end = 0;
-      var list = [];
+      var list2 = [];
       var start = 0;
       for (var i = 0, len = header.length; i < len; i++) {
         switch (header.charCodeAt(i)) {
@@ -23423,7 +23423,7 @@ var require_vary = __commonJS({
             }
             break;
           case 44:
-            list.push(header.substring(start, end));
+            list2.push(header.substring(start, end));
             start = end = i + 1;
             break;
           default:
@@ -23431,8 +23431,8 @@ var require_vary = __commonJS({
             break;
         }
       }
-      list.push(header.substring(start, end));
-      return list;
+      list2.push(header.substring(start, end));
+      return list2;
     }
     function vary(res, field) {
       if (!res || !res.getHeader || !res.setHeader) {
@@ -24139,6 +24139,19 @@ db.exec(`
     updated_at TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_messages_room_created ON messages(room_id, created_at);
+  CREATE TABLE IF NOT EXISTS councils (
+    id TEXT PRIMARY KEY,
+    room_id TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    question TEXT NOT NULL,
+    agent_ids TEXT NOT NULL,
+    phase TEXT NOT NULL,
+    results TEXT NOT NULL DEFAULT '{}',
+    chair_agent_id TEXT,
+    error TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_councils_room_created ON councils(room_id, created_at);
 `);
 function migrateRuntimeConstraint() {
   const schema = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'agents'").get();
@@ -24234,6 +24247,7 @@ db.prepare(`UPDATE messages
 Runtime interrupted by a broker restart. Send the message again to retry.' END,
       updated_at = ?
   WHERE status = 'streaming'`).run((/* @__PURE__ */ new Date()).toISOString());
+db.prepare("UPDATE councils SET phase = 'failed', error = 'Interrupted by a broker restart.', updated_at = ? WHERE phase IN ('blind', 'ranking', 'responding', 'minutes')").run((/* @__PURE__ */ new Date()).toISOString());
 var now = () => (/* @__PURE__ */ new Date()).toISOString();
 function seedLegacyRoom() {
   const timestamp = now();
@@ -24248,6 +24262,7 @@ seedLegacyRoom();
 var mapRoom = (row) => ({ id: row.id, name: row.name, projectCwd: row.project_cwd, meetingStatus: row.meeting_status, hostAgentId: row.host_agent_id, hostExpiresAt: row.host_expires_at, archivedAt: row.archived_at, createdAt: row.created_at, updatedAt: row.updated_at });
 var mapAgent = (row) => ({ id: row.id, name: row.name, runtime: row.runtime, model: row.model, cwd: row.cwd, sessionId: row.session_id, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at });
 var mapMessage = (row) => ({ id: row.id, roomId: row.room_id, senderId: row.sender_id, senderName: row.sender_name, senderRuntime: row.sender_runtime, content: row.content, status: row.status, replyTo: row.reply_to, metadata: JSON.parse(row.metadata), createdAt: row.created_at, updatedAt: row.updated_at });
+var mapCouncil = (row) => ({ id: row.id, roomId: row.room_id, question: row.question, agentIds: JSON.parse(row.agent_ids), phase: row.phase, results: JSON.parse(row.results), chairAgentId: row.chair_agent_id, error: row.error, createdAt: row.created_at, updatedAt: row.updated_at });
 var messageSelect = `SELECT messages.*, agents.name AS sender_name, agents.runtime AS sender_runtime FROM messages JOIN agents ON agents.id = messages.sender_id`;
 function listRooms(includeArchived = false) {
   return db.prepare(`SELECT * FROM rooms ${includeArchived ? "" : "WHERE archived_at IS NULL"} ORDER BY updated_at DESC`).all().map(mapRoom);
@@ -24320,6 +24335,26 @@ function updateMessage(id, patch) {
   if (!current) throw new Error(`Unknown message: ${id}`);
   db.prepare("UPDATE messages SET content = ?, status = ?, metadata = ?, updated_at = ? WHERE id = ?").run(patch.content ?? current.content, patch.status ?? current.status, JSON.stringify(patch.metadata ?? current.metadata), now(), id);
   return getMessage(id);
+}
+function createCouncil(input) {
+  const id = (0, import_node_crypto.randomUUID)();
+  const timestamp = now();
+  db.prepare("INSERT INTO councils (id, room_id, question, agent_ids, phase, results, created_at, updated_at) VALUES (?, ?, ?, ?, 'blind', '{}', ?, ?)").run(id, input.roomId, input.question, JSON.stringify(input.agentIds), timestamp, timestamp);
+  return getCouncil(id);
+}
+function getCouncil(id) {
+  const row = db.prepare("SELECT * FROM councils WHERE id = ?").get(id);
+  return row ? mapCouncil(row) : void 0;
+}
+function listCouncils(roomId, limit = 20) {
+  return db.prepare("SELECT * FROM councils WHERE room_id = ? ORDER BY created_at DESC LIMIT ?").all(roomId, limit).reverse().map(mapCouncil);
+}
+function updateCouncil(id, patch) {
+  const current = getCouncil(id);
+  if (!current) throw new Error(`Unknown council: ${id}`);
+  const next = { ...current, ...patch };
+  db.prepare("UPDATE councils SET phase = ?, results = ?, chair_agent_id = ?, error = ?, updated_at = ? WHERE id = ?").run(next.phase, JSON.stringify(next.results), next.chairAgentId, next.error, now(), id);
+  return getCouncil(id);
 }
 
 // src/server/events.ts
@@ -25542,8 +25577,8 @@ var activeRuns = /* @__PURE__ */ new Map();
 var activeInvocations = /* @__PURE__ */ new Map();
 var activeSessions = /* @__PURE__ */ new Set();
 var turnTimeoutMs = Number(process.env.POLYCHAT_TURN_TIMEOUT_MS ?? 30 * 60 * 1e3);
-function roomPrompt(roomId, agent, directPrompt, senderName) {
-  const visibleMessages = listMessages(roomId, 60).filter((message) => message.status !== "streaming");
+function roomPrompt(roomId, agent, directPrompt, senderName, hideMessage) {
+  const visibleMessages = listMessages(roomId, 60).filter((message) => message.status !== "streaming" && !hideMessage?.(message));
   const last = visibleMessages.at(-1);
   if (last?.senderName === senderName && last.content.trim() === directPrompt.trim()) visibleMessages.pop();
   const transcript = visibleMessages.map((message) => `${message.senderName}: ${message.content}`).join("\n\n");
@@ -25568,17 +25603,17 @@ function runtimeFailure(agent, error) {
   if (error instanceof PolychatRuntimeError) return error.detail;
   return { code: "process_failed", runtime: isRuntimeId(agent.runtime) ? agent.runtime : "codex", message: error instanceof Error ? error.message : String(error), retryable: true };
 }
-function invokeAgent(roomId, agent, directPrompt, senderName = "Human", timeoutMs = turnTimeoutMs) {
+function invokeAgent(roomId, agent, directPrompt, senderName = "Human", timeoutMs = turnTimeoutMs, options = {}) {
   if (!isRuntimeId(agent.runtime)) throw new Error("A human participant cannot be invoked as a runtime.");
   if (!listAgents(roomId).some((member) => member.id === agent.id)) throw new Error("The participant does not belong to this room.");
   if (activeRuns.has(agent.id)) throw new Error(`${agent.name} is already responding.`);
   const sessionKey = agent.sessionId ? `${agent.runtime}:${agent.sessionId}` : null;
   if (sessionKey && activeSessions.has(sessionKey)) throw new Error("This runtime session is already responding in another room. Use a separate session or wait for it to finish.");
-  const placeholder = createMessage({ roomId, senderId: agent.id, status: "streaming", metadata: { runtime: agent.runtime } });
+  const placeholder = createMessage({ roomId, senderId: agent.id, status: "streaming", metadata: { runtime: agent.runtime, ...options.metadata } });
   publish(roomId, { type: "message.created", message: placeholder });
   publish(roomId, { type: "agent.updated", agent: updateAgent(agent.id, { status: "thinking" }) });
   const adapter = getRuntimeAdapter(agent.runtime);
-  const prompt = roomPrompt(roomId, agent, directPrompt, senderName);
+  const prompt = roomPrompt(roomId, agent, directPrompt, senderName, options.hideMessage);
   let invocation;
   const heldSessions = /* @__PURE__ */ new Set();
   const holdSession = (id) => {
@@ -25601,7 +25636,7 @@ function invokeAgent(roomId, agent, directPrompt, senderName = "Human", timeoutM
   } catch (error) {
     for (const key of heldSessions) activeSessions.delete(key);
     const detail = runtimeFailure(agent, error);
-    const message = updateMessage(placeholder.id, { content: `Runtime error: ${detail.message}`, status: "error", metadata: { error: detail } });
+    const message = updateMessage(placeholder.id, { content: `Runtime error: ${detail.message}`, status: "error", metadata: { ...placeholder.metadata, error: detail } });
     publish(roomId, { type: "message.updated", message });
     publish(roomId, { type: "agent.updated", agent: updateAgent(agent.id, { status: "available" }) });
     return { placeholder, completion: Promise.resolve(message) };
@@ -25609,12 +25644,12 @@ function invokeAgent(roomId, agent, directPrompt, senderName = "Human", timeoutM
   activeInvocations.set(agent.id, invocation);
   const run = invocation.completion.then((result) => {
     if (result.sessionId && result.sessionId !== agent.sessionId) publish(roomId, { type: "agent.updated", agent: updateAgent(agent.id, { sessionId: result.sessionId }) });
-    const message = updateMessage(placeholder.id, { content: result.text.trim(), status: "complete", metadata: result.metadata });
+    const message = updateMessage(placeholder.id, { content: result.text.trim(), status: "complete", metadata: { ...placeholder.metadata, ...result.metadata } });
     publish(roomId, { type: "message.updated", message });
     return message;
   }).catch((error) => {
     const detail = runtimeFailure(agent, error);
-    const message = updateMessage(placeholder.id, { content: `Runtime error: ${detail.message}`, status: "error", metadata: { error: detail } });
+    const message = updateMessage(placeholder.id, { content: `Runtime error: ${detail.message}`, status: "error", metadata: { ...placeholder.metadata, error: detail } });
     publish(roomId, { type: "message.updated", message });
     return message;
   }).finally(() => {
@@ -25635,6 +25670,237 @@ function cancelAgents(agentIds) {
       cancelled += 1;
     }
   }
+  return cancelled;
+}
+
+// src/server/council.ts
+var turnLimitMs = Number(process.env.POLYCHAT_COUNCIL_TURN_MS ?? 5 * 6e4);
+var activePhases = /* @__PURE__ */ new Set(["blind", "ranking", "responding", "minutes"]);
+var letters = "ABCDEF";
+var speaker = "Polychat council";
+var runtimeNames = { human: "Human", codex: "Codex", "claude-code": "Claude Code", grok: "Grok Build", "kimi-code": "Kimi Code" };
+var who = (agent) => agent.name === runtimeNames[agent.runtime] ? agent.name : `${agent.name} (${runtimeNames[agent.runtime]})`;
+var nameOf = (agentId) => getAgent(agentId)?.name ?? "A member";
+var ordinal = (place) => ["first", "second", "third", "fourth", "fifth", "sixth"][place - 1] ?? `#${place}`;
+var list = (names) => names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+function activeCouncil(roomId) {
+  return listCouncils(roomId, 5).find((council) => activePhases.has(council.phase));
+}
+function publishCouncil(council) {
+  publish(council.roomId, { type: "council.updated", council });
+  return council;
+}
+function setPhase(id, phase, patch = {}) {
+  return publishCouncil(updateCouncil(id, { phase, ...patch }));
+}
+function stillRunning(id) {
+  const council = getCouncil(id);
+  return Boolean(council && activePhases.has(council.phase));
+}
+function parseRanking(text, labels) {
+  const line = text.match(/RANKING:\s*([^\n]+)/i)?.[1] ?? "";
+  const order = [];
+  for (const match of line.toUpperCase().matchAll(/\b([A-F])\b/g)) if (labels.includes(match[1]) && !order.includes(match[1])) order.push(match[1]);
+  return order;
+}
+function parsePosition(text) {
+  const stated = text.match(/Position:?\**\s*\**\s*(HELD|SHARPENED|CHANGED)\b/i)?.[1] ?? text.match(/\b(HELD|SHARPENED|CHANGED)\b/)?.[1];
+  return stated ? stated.toUpperCase() : null;
+}
+function tallyRankings(labels, ballots, seatOrder) {
+  const count = Object.keys(labels).length;
+  const points = Object.fromEntries(Object.values(labels).map((agentId) => [agentId, 0]));
+  const firstPlaceVotes = {};
+  const selfPreference = [];
+  for (const [rankerId, order2] of Object.entries(ballots)) {
+    order2.forEach((label, index) => {
+      const agentId = labels[label];
+      if (agentId) points[agentId] += count - 1 - index;
+    });
+    const top = labels[order2[0]];
+    if (top) {
+      (firstPlaceVotes[top] ??= []).push(rankerId);
+      if (top === rankerId) selfPreference.push(rankerId);
+    }
+  }
+  const order = Object.keys(points).sort((a, b) => points[b] - points[a] || (firstPlaceVotes[b]?.length ?? 0) - (firstPlaceVotes[a]?.length ?? 0) || seatOrder.indexOf(a) - seatOrder.indexOf(b));
+  return { points, order, firstPlaceVotes, selfPreference };
+}
+function rankingSummary(results) {
+  const lines = results.order.map((agentId, index) => {
+    const firsts = results.firstPlaceVotes[agentId] ?? [];
+    return `${index + 1}. ${nameOf(agentId)}: ${results.points[agentId]} point${results.points[agentId] === 1 ? "" : "s"}${firsts.length ? `, first choice of ${list(firsts.map(nameOf))}` : ""}`;
+  });
+  lines.push(results.selfPreference.length ? `${list(results.selfPreference.map(nameOf))} ranked their own answer first.` : "No one ranked their own answer first.");
+  return lines.join("\n");
+}
+function shuffle(items) {
+  const copy = [...items];
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const pick = Math.floor(Math.random() * (index + 1));
+    [copy[index], copy[pick]] = [copy[pick], copy[index]];
+  }
+  return copy;
+}
+function blindPrompt(question, count) {
+  return `COUNCIL \xB7 BLIND ROUND
+You are one of ${count} minds answering this question independently. You can't see the others' answers and they can't see yours; all the answers are revealed together once everyone is in. Draw on your own project, memory, and judgment.
+
+QUESTION
+${question}
+
+Give your best answer in 150\u2013400 words, plainly written. End with one line that starts "Position:" and states your recommendation in a sentence.`;
+}
+function rankingPrompt(question, labeled) {
+  return `COUNCIL \xB7 BLIND RANKING
+${labeled.length} minds answered the question below independently. Their answers appear with the authors hidden, in shuffled order. One of them may be yours: judge it exactly as you would anyone else's.
+
+QUESTION
+${question}
+
+${labeled.map((item) => `ANSWER ${item.label}
+${item.text}`).join("\n\n")}
+
+Rank all ${labeled.length} answers (${labeled.map((item) => item.label).join(", ")}) from strongest to weakest, for rigor and for usefulness to the person asking. Reply in exactly this form and nothing else:
+RANKING: <strongest letter> > \u2026 > <weakest letter>
+STRONGEST: <letter>: its best point, in one sentence
+WEAKEST: <letter>: its biggest problem, in one sentence`;
+}
+function responsePrompt(question, ranked, summary) {
+  return `COUNCIL \xB7 CROSS-EXAMINATION
+The blind round is over. Here is every answer with its author, in the order the council ranked them while the authors were hidden.
+
+QUESTION
+${question}
+
+${ranked.map((item, index) => `### ${who(item.agent)}, ranked ${ordinal(index + 1)}
+${item.text}`).join("\n\n")}
+
+BLIND RANKING
+${summary}
+
+Now answer the others directly, in 150\u2013300 words:
+**Strongest point from another mind:** who, and what it changes or sharpens for you.
+**Challenge:** the claim you most disagree with. Quote it briefly, say who made it, and why you disagree.
+**Concession:** what in your own answer you now think was wrong, overweighted, or missing. "None" only if you say why nothing landed.
+**Position:** HELD, SHARPENED, or CHANGED, then your recommendation now in one sentence. Pick the one that's true, not the one that sounds balanced.`;
+}
+function minutesPrompt(question, ranked, summary, responses) {
+  return `COUNCIL \xB7 MINUTES
+You chair this council because the blind ranking placed your answer first. Write the minutes for the person who asked. Represent every mind fairly, including the ones who disagreed with you, and don't advocate for your own answer.
+
+QUESTION
+${question}
+
+BLIND ANSWERS, IN RANKED ORDER
+${ranked.map((item) => `### ${who(item.agent)}
+${item.text}`).join("\n\n")}
+
+BLIND RANKING
+${summary}
+
+CROSS-EXAMINATION
+${responses.map((item) => `### ${who(item.agent)}
+${item.text}`).join("\n\n")}
+
+Write the minutes plainly, in Markdown, with exactly these sections:
+## Decision
+1\u20133 sentences: what the council recommends, and how settled it is.
+## Where each mind landed
+One bullet per member: **name**: HELD, SHARPENED, or CHANGED, then their recommendation in a sentence.
+## What moved
+Who changed or sharpened, and what moved them.
+## Dissent
+What is still disputed, and between whom. Write "None." if nothing is.
+## Next steps
+3\u20135 concrete steps. Where it's natural, name who in the room is best placed to take each one.`;
+}
+async function runRound(council, role, agentIds, promptFor, extra = {}) {
+  const metadata = { councilId: council.id, councilRole: role, ...extra };
+  const hideMessage = (message) => message.metadata.councilId === council.id;
+  const turns = agentIds.map((agentId) => {
+    const agent = getAgent(agentId);
+    if (!agent) return Promise.resolve(null);
+    try {
+      return invokeAgent(council.roomId, agent, promptFor(agent), speaker, turnLimitMs, { hideMessage, metadata }).completion;
+    } catch (error) {
+      const message = createMessage({ roomId: council.roomId, senderId: agent.id, status: "error", content: `Couldn't take part in this round: ${error instanceof Error ? error.message : String(error)}`, metadata });
+      publish(council.roomId, { type: "message.created", message });
+      return Promise.resolve(message);
+    }
+  });
+  const settled = await Promise.all(turns);
+  return new Map(agentIds.map((agentId, index) => [agentId, settled[index]]));
+}
+async function runCouncil(id) {
+  let council = getCouncil(id);
+  const seats = council.agentIds;
+  const blind = await runRound(council, "blind", seats, () => blindPrompt(council.question, seats.length), { sealed: true });
+  for (const message of blind.values()) if (message) publish(council.roomId, { type: "message.updated", message: updateMessage(message.id, { metadata: { ...message.metadata, sealed: false } }) });
+  if (!stillRunning(id)) return;
+  const answered = seats.filter((agentId) => blind.get(agentId)?.status === "complete" && blind.get(agentId).content.trim());
+  if (answered.length < 2) {
+    setPhase(id, "failed", { error: `A council needs at least two answers, and ${answered.length === 1 ? "only one" : "none"} came back.` });
+    return;
+  }
+  const shuffled = shuffle(answered);
+  const labels = Object.fromEntries(shuffled.map((agentId, index) => [letters[index], agentId]));
+  const labeled = shuffled.map((agentId, index) => ({ label: letters[index], text: blind.get(agentId).content }));
+  council = setPhase(id, "ranking", { results: { labels } });
+  const rankings = await runRound(council, "ranking", answered, () => rankingPrompt(council.question, labeled));
+  if (!stillRunning(id)) return;
+  const ballots = {};
+  for (const agentId of answered) {
+    const message = rankings.get(agentId);
+    const order = message?.status === "complete" ? parseRanking(message.content, Object.keys(labels)) : [];
+    if (order.length) ballots[agentId] = order;
+  }
+  const tally = tallyRankings(labels, ballots, seats);
+  council = setPhase(id, "responding", { results: { labels, ballots, ...tally } });
+  const ranked = tally.order.map((agentId) => ({ agent: getAgent(agentId), text: blind.get(agentId).content }));
+  const summary = rankingSummary(tally);
+  const responses = await runRound(council, "response", answered, () => responsePrompt(council.question, ranked, summary));
+  if (!stillRunning(id)) return;
+  const positions = {};
+  for (const agentId of answered) {
+    const message = responses.get(agentId);
+    const position = message?.status === "complete" ? parsePosition(message.content) : null;
+    if (position) positions[agentId] = position;
+  }
+  const chairId = tally.order.find((agentId) => responses.get(agentId)?.status === "complete") ?? tally.order[0];
+  const answeredBack = answered.filter((agentId) => responses.get(agentId)?.status === "complete").map((agentId) => ({ agent: getAgent(agentId), text: responses.get(agentId).content }));
+  council = setPhase(id, "minutes", { results: { ...council.results, positions }, chairAgentId: chairId });
+  const minutes = await runRound(council, "minutes", [chairId], () => minutesPrompt(council.question, ranked, summary, answeredBack));
+  if (!stillRunning(id)) return;
+  const written = minutes.get(chairId)?.status === "complete";
+  setPhase(id, written ? "complete" : "failed", written ? {} : { error: `${nameOf(chairId)} couldn't write the minutes.` });
+}
+function startCouncil(roomId, input) {
+  const question = input.question.trim();
+  if (!question) throw new Error("A council needs a question.");
+  if (activeCouncil(roomId)) throw new Error("A council is already in session in this room.");
+  const members = listAgents(roomId);
+  const sender = members.find((agent) => agent.id === (input.senderId ?? "riley"));
+  if (!sender) throw new Error(`Unknown sender in this room: ${input.senderId}`);
+  const wanted = input.agentIds?.length ? new Set(input.agentIds) : null;
+  const seated = members.filter((agent) => agent.runtime !== "human" && agent.status !== "away" && agent.id !== sender.id && (!wanted || wanted.has(agent.id)));
+  if (seated.length < 2) throw new Error("A council needs at least two available collaborators.");
+  if (seated.length > letters.length) throw new Error(`A council seats at most ${letters.length} collaborators.`);
+  const council = createCouncil({ roomId, question, agentIds: seated.map((agent) => agent.id) });
+  const message = createMessage({ roomId, senderId: sender.id, content: question, metadata: { councilId: council.id, councilRole: "question", audience: "room", recipientAgentIds: council.agentIds } });
+  publish(roomId, { type: "message.created", message });
+  publishCouncil(council);
+  void runCouncil(council.id).catch((error) => {
+    console.error("Polychat council failed:", error);
+    if (stillRunning(council.id)) setPhase(council.id, "failed", { error: error instanceof Error ? error.message : String(error) });
+  });
+  return council;
+}
+function cancelCouncil(roomId, councilId) {
+  const council = councilId ? getCouncil(councilId) : activeCouncil(roomId);
+  if (!council || council.roomId !== roomId || !activePhases.has(council.phase)) return null;
+  const cancelled = setPhase(council.id, "cancelled");
+  cancelAgents(council.agentIds);
   return cancelled;
 }
 
@@ -25675,7 +25941,7 @@ function roomState(roomId) {
     room = updateRoom(roomId, { meetingStatus: "complete", hostExpiresAt: null });
     publish(roomId, { type: "room.updated", room });
   }
-  return { room, agents: listAgents(roomId), messages: listMessages(roomId, 300), eventCursor: currentCursor() };
+  return { room, agents: listAgents(roomId), messages: listMessages(roomId, 300), councils: listCouncils(roomId, 20), eventCursor: currentCursor() };
 }
 function senderInRoom(roomId, senderId) {
   return listAgents(roomId).find((agent) => agent.id === senderId);
@@ -25700,15 +25966,25 @@ function requestedTurns(content, recipients) {
   if (match) return Math.min(Math.max(Number(match[1]), 1), 12);
   return Math.min(Math.max(recipients * 2, 2), 12);
 }
+var stopPhrase = /^\s*(?:stop|cancel|end)(?:\s+(?:the\s+)?(?:council|meeting|discussion))?[.!]?\s*$/i;
 function sendMessage(roomId, body) {
   const content = String(body.content ?? "").trim();
   const senderId = String(body.senderId ?? "riley");
   if (!content) throw new Error("Message content is required.");
   const sender = senderInRoom(roomId, senderId);
   if (!sender) throw new Error(`Unknown sender in this room: ${senderId}`);
+  const council = activeCouncil(roomId);
+  if (council) {
+    const stop = stopPhrase.test(content);
+    if (sender.runtime === "human" && !stop) throw new Error("A council is in session. Type stop to end it, or wait for the minutes.");
+    const posted = createMessage({ roomId, senderId, content, metadata: { audience: "room", recipientAgentIds: [], stopRequested: stop } });
+    publish(roomId, { type: "message.created", message: posted });
+    if (stop) cancelCouncil(roomId, council.id);
+    return { ...posted, dispatchedAgentIds: [], dispatchErrors: [], queuedForMeeting: false, stopRequested: stop };
+  }
   const room = getRoom(roomId);
   const meetingInput = sender.runtime === "human" && room?.meetingStatus === "live";
-  const stopRequested = meetingInput && /^\s*(?:stop|cancel|end)(?:\s+(?:the\s+)?(?:council|meeting|discussion))?[.!]?\s*$/i.test(content);
+  const stopRequested = meetingInput && stopPhrase.test(content);
   const requested = Array.isArray(body.recipientAgentIds) ? body.recipientAgentIds.map(String) : sender.runtime === "human" ? listAgents(roomId).filter((agent) => agent.runtime !== "human" && agent.status !== "away").map((agent) => agent.id) : [];
   const recipientIds = [...new Set(requested)].filter((id) => id !== senderId);
   const message = createMessage({ roomId, senderId, content, metadata: { audience: body.audience === "direct" ? "direct" : "room", recipientAgentIds: recipientIds, queuedForMeeting: meetingInput && !stopRequested, stopRequested } });
@@ -25784,6 +26060,19 @@ app.post("/api/rooms/:roomId/messages", (request, response) => {
   } catch (error) {
     response.status(400).json({ error: error instanceof Error ? error.message : String(error) });
   }
+});
+app.post("/api/rooms/:roomId/councils", (request, response) => {
+  try {
+    if (!getRoom(request.params.roomId)) return response.status(404).json({ error: "Room not found." });
+    const council = startCouncil(request.params.roomId, { question: String(request.body?.question ?? ""), agentIds: Array.isArray(request.body?.agentIds) ? request.body.agentIds.map(String) : void 0, senderId: typeof request.body?.senderId === "string" ? request.body.senderId : void 0 });
+    response.status(202).json({ council, eventCursor: currentCursor() });
+  } catch (error) {
+    response.status(409).json({ error: error instanceof Error ? error.message : String(error) });
+  }
+});
+app.delete("/api/rooms/:roomId/councils/:councilId", (request, response) => {
+  const council = cancelCouncil(request.params.roomId, request.params.councilId);
+  council ? response.json(council) : response.status(404).json({ error: "No council in session with that id." });
 });
 app.post("/api/rooms/:roomId/participants", (request, response) => {
   try {

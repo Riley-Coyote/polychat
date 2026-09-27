@@ -3,7 +3,7 @@ import { copyFileSync, existsSync, mkdirSync, statfsSync, statSync } from "node:
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
-import type { Agent, ChatMessage, MeetingStatus, MessageStatus, Room, Runtime } from "../shared/types.js";
+import type { Agent, ChatMessage, Council, CouncilPhase, CouncilResults, MeetingStatus, MessageStatus, Room, Runtime } from "../shared/types.js";
 
 const defaultDataDir = join(homedir(), "Library", "Application Support", "Polychat");
 export const dataDir = process.env.POLYCHAT_DATA_DIR ?? defaultDataDir;
@@ -67,6 +67,19 @@ db.exec(`
     updated_at TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_messages_room_created ON messages(room_id, created_at);
+  CREATE TABLE IF NOT EXISTS councils (
+    id TEXT PRIMARY KEY,
+    room_id TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+    question TEXT NOT NULL,
+    agent_ids TEXT NOT NULL,
+    phase TEXT NOT NULL,
+    results TEXT NOT NULL DEFAULT '{}',
+    chair_agent_id TEXT,
+    error TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_councils_room_created ON councils(room_id, created_at);
 `);
 
 function migrateRuntimeConstraint() {
@@ -158,6 +171,7 @@ db.prepare(`UPDATE messages
         ELSE content || '\n\nRuntime interrupted by a broker restart. Send the message again to retry.' END,
       updated_at = ?
   WHERE status = 'streaming'`).run(new Date().toISOString());
+db.prepare("UPDATE councils SET phase = 'failed', error = 'Interrupted by a broker restart.', updated_at = ? WHERE phase IN ('blind', 'ranking', 'responding', 'minutes')").run(new Date().toISOString());
 
 const now = () => new Date().toISOString();
 
@@ -176,11 +190,13 @@ seedLegacyRoom();
 
 type RoomRow = { id: string; name: string; project_cwd: string | null; meeting_status: MeetingStatus; host_agent_id: string | null; host_expires_at: string | null; archived_at: string | null; created_at: string; updated_at: string };
 type AgentRow = { id: string; name: string; runtime: Runtime; model: string | null; cwd: string | null; session_id: string | null; status: Agent["status"]; created_at: string; updated_at: string };
+type CouncilRow = { id: string; room_id: string; question: string; agent_ids: string; phase: CouncilPhase; results: string; chair_agent_id: string | null; error: string | null; created_at: string; updated_at: string };
 type MessageRow = { id: string; room_id: string; sender_id: string; sender_name: string; sender_runtime: Runtime; content: string; status: MessageStatus; reply_to: string | null; metadata: string; created_at: string; updated_at: string };
 
 const mapRoom = (row: RoomRow): Room => ({ id: row.id, name: row.name, projectCwd: row.project_cwd, meetingStatus: row.meeting_status, hostAgentId: row.host_agent_id, hostExpiresAt: row.host_expires_at, archivedAt: row.archived_at, createdAt: row.created_at, updatedAt: row.updated_at });
 const mapAgent = (row: AgentRow): Agent => ({ id: row.id, name: row.name, runtime: row.runtime, model: row.model, cwd: row.cwd, sessionId: row.session_id, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at });
 const mapMessage = (row: MessageRow): ChatMessage => ({ id: row.id, roomId: row.room_id, senderId: row.sender_id, senderName: row.sender_name, senderRuntime: row.sender_runtime, content: row.content, status: row.status, replyTo: row.reply_to, metadata: JSON.parse(row.metadata) as Record<string, unknown>, createdAt: row.created_at, updatedAt: row.updated_at });
+const mapCouncil = (row: CouncilRow): Council => ({ id: row.id, roomId: row.room_id, question: row.question, agentIds: JSON.parse(row.agent_ids) as string[], phase: row.phase, results: JSON.parse(row.results) as CouncilResults, chairAgentId: row.chair_agent_id, error: row.error, createdAt: row.created_at, updatedAt: row.updated_at });
 const messageSelect = `SELECT messages.*, agents.name AS sender_name, agents.runtime AS sender_runtime FROM messages JOIN agents ON agents.id = messages.sender_id`;
 
 export function listRooms(includeArchived = false): Room[] {
@@ -266,4 +282,28 @@ export function updateMessage(id: string, patch: Partial<Pick<ChatMessage, "cont
   db.prepare("UPDATE messages SET content = ?, status = ?, metadata = ?, updated_at = ? WHERE id = ?")
     .run(patch.content ?? current.content, patch.status ?? current.status, JSON.stringify(patch.metadata ?? current.metadata), now(), id);
   return getMessage(id)!;
+}
+
+export function createCouncil(input: { roomId: string; question: string; agentIds: string[] }): Council {
+  const id = randomUUID(); const timestamp = now();
+  db.prepare("INSERT INTO councils (id, room_id, question, agent_ids, phase, results, created_at, updated_at) VALUES (?, ?, ?, ?, 'blind', '{}', ?, ?)")
+    .run(id, input.roomId, input.question, JSON.stringify(input.agentIds), timestamp, timestamp);
+  return getCouncil(id)!;
+}
+
+export function getCouncil(id: string): Council | undefined {
+  const row = db.prepare("SELECT * FROM councils WHERE id = ?").get(id) as CouncilRow | undefined;
+  return row ? mapCouncil(row) : undefined;
+}
+
+export function listCouncils(roomId: string, limit = 20): Council[] {
+  return (db.prepare("SELECT * FROM councils WHERE room_id = ? ORDER BY created_at DESC LIMIT ?").all(roomId, limit) as CouncilRow[]).reverse().map(mapCouncil);
+}
+
+export function updateCouncil(id: string, patch: Partial<Pick<Council, "phase" | "results" | "chairAgentId" | "error">>): Council {
+  const current = getCouncil(id); if (!current) throw new Error(`Unknown council: ${id}`);
+  const next = { ...current, ...patch };
+  db.prepare("UPDATE councils SET phase = ?, results = ?, chair_agent_id = ?, error = ?, updated_at = ? WHERE id = ?")
+    .run(next.phase, JSON.stringify(next.results), next.chairAgentId, next.error, now(), id);
+  return getCouncil(id)!;
 }
