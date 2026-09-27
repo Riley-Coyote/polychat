@@ -82,7 +82,7 @@ export function App() {
   useEffect(() => {
     if (!roomId || presentation) return;
     setConnection("connecting");
-    fetch(`/api/rooms/${roomId}`).then(async (response) => { if (!response.ok) throw new Error("Room unavailable"); return response.json(); }).then((next) => { setState(next); setConnection("live"); }).catch(() => setConnection("offline"));
+    fetch(`/api/rooms/${roomId}`).then(async (response) => { if (!response.ok) throw new Error("Room unavailable"); return response.json(); }).then((next: RoomState) => { setState({ ...next, councils: next.councils ?? [] }); setConnection("live"); }).catch(() => setConnection("offline"));
     const events = new EventSource(`/api/rooms/${roomId}/events`);
     events.addEventListener("open", () => setConnection("live")); events.addEventListener("error", () => setConnection("offline"));
     events.addEventListener("room", (raw) => { const event = JSON.parse((raw as MessageEvent).data) as RoomEvent; setState((current) => { if (event.type === "room.updated") return { ...current, room: event.room, eventCursor: event.eventId }; if (event.type === "agent.updated") return { ...current, agents: upsert(current.agents, event.agent), eventCursor: event.eventId }; if (event.type === "agent.removed") return { ...current, agents: current.agents.filter((agent) => agent.id !== event.agentId), eventCursor: event.eventId }; if (event.type === "message.created" || event.type === "message.updated") return { ...current, messages: upsert(current.messages, event.message), eventCursor: event.eventId }; if (event.type === "council.updated") return { ...current, councils: upsert(current.councils, event.council), eventCursor: event.eventId }; return { ...current, eventCursor: event.eventId }; }); });
