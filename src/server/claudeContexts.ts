@@ -42,6 +42,7 @@ type TranscriptRecord = {
   isSidechain?: boolean;
   entrypoint?: string;
   lastPrompt?: string;
+  customTitle?: string;
   message?: { role?: string; content?: unknown };
 };
 
@@ -163,6 +164,7 @@ function isMaintenanceSession(session: ClaudeSessionContext) {
 
 function inspectTranscript(path: string): {
   cwd: string | null;
+  customTitle: string | null;
   session: ClaudeSessionContext;
 } {
   const stats = statSync(path);
@@ -182,13 +184,16 @@ function inspectTranscript(path: string): {
   const lastPrompt = cleanPreview(lastPromptRecord?.lastPrompt ?? textContent(lastUser?.message?.content));
   const sessionId = sessionRecord?.sessionId ?? basename(path, ".jsonl");
   const slug = records.find((record) => record.slug)?.slug;
+  // A session someone named (or that Claude Code titled) keeps that name; the latest one wins.
+  const customTitle = cleanPreview([...records].reverse().find((record) => record.type === "custom-title" && record.customTitle)?.customTitle ?? "", 82) || null;
   const createdAt = firstUser?.timestamp ?? cwdRecord?.timestamp ?? sessionRecord?.timestamp ?? null;
 
   return {
     cwd: cwdRecord?.cwd ?? null,
+    customTitle,
     session: {
       id: sessionId,
-      title: titleFrom(slug, preview),
+      title: customTitle ?? titleFrom(slug, preview),
       preview,
       lastPrompt,
       branch: branchRecord?.gitBranch ?? null,
@@ -253,6 +258,28 @@ export function listClaudeProjects(query = ""): ClaudeProjectContext[] {
   const value = projects.sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)).slice(0, 80);
   projectCache.set(normalizedQuery, { expiresAt: Date.now() + cacheTtl, value });
   return value;
+}
+
+// Claude Code names each project's folder after its path, with every other character turned into "-".
+export function claudeProjectDir(cwd: string) { return join(claudeProjectsRoot, cwd.replace(/[^a-zA-Z0-9]/g, "-")); }
+
+// One exact session, looked up where its working folder says it lives, then anywhere.
+export function findClaudeSession(sessionId: string, cwd: string | null): ClaudeSessionContext | null {
+  const file = `${basename(sessionId)}.jsonl`;
+  let path = cwd ? join(claudeProjectDir(cwd), file) : "";
+  if (!path || !existsSync(path)) {
+    path = "";
+    if (existsSync(claudeProjectsRoot)) for (const entry of readdirSync(claudeProjectsRoot, { withFileTypes: true })) {
+      const candidate = join(claudeProjectsRoot, entry.name, file);
+      if (entry.isDirectory() && existsSync(candidate)) { path = candidate; break; }
+    }
+  }
+  if (!path) return null;
+  try {
+    // Without a real name, the first prompt says more than the session's random nickname.
+    const { customTitle, session } = inspectTranscript(path);
+    return customTitle || !session.preview ? session : { ...session, title: titleFrom(undefined, session.preview) };
+  } catch { return null; }
 }
 
 export function listClaudeSessions(projectId: string, limit = 30): ClaudeSessionContext[] {

@@ -51,6 +51,14 @@ A council puts one question to every collaborator in the room, in four rounds:
 
 Start one with the **Council** button beside the composer, or type `/council` followed by your question. Agents use `run_council`. Type `stop` to end one early.
 
+The minutes outlive the room. Every finished council is saved as a Markdown record, with the decision first and then the blind ranking, every answer, and the cross-examination, in:
+
+```text
+~/Documents/council-records/polychat/
+```
+
+Set `POLYCHAT_RECORDS_DIR` to keep them somewhere else. To put a copy in the project itself, use **Save to** under the minutes, or `save_minutes_to_project` from an agent. The copy goes in the project's `councils` folder, where the collaborators working there can read it.
+
 ## What a meeting does
 
 The invoking Codex or Claude task becomes the live host. Polychat creates a saved room, resolves the requested project and exact runtime sessions, opens the browser transcript, and conducts a bounded two-round discussion by default. The host participates between rounds and posts a final synthesis.
@@ -61,6 +69,7 @@ Rooms support:
 
 - Multiple Claude Code, Codex, Grok Build, and Kimi Code participants with different models.
 - Searchable project and exact-session history for all four runtimes.
+- A card for each collaborator showing what it brings: its project, the instruction files and memory its runtime reads there, and the conversation it continues.
 - Direct messages or room-wide messages.
 - Saved transcripts and participant context bindings.
 - Read/plan-oriented runtime execution for ideation. Grok uses its read-only sandbox; Kimi is additionally wrapped in macOS Seatbelt, which lets it write only its own state and scratch space.
@@ -68,7 +77,7 @@ Rooms support:
 
 ## Privacy and storage
 
-Polychat binds only to `127.0.0.1` and answers only requests addressed to this machine from its own pages, so other websites can't reach it. It has no hosted service, account, telemetry, remote synchronization, or model API proxy.
+Polychat binds only to `127.0.0.1` and answers only requests addressed to this machine from its own pages, so other websites can't reach it. It has no hosted service, account, telemetry, remote synchronization, or model API proxy. The only files it writes outside its own folder are council records: in `~/Documents/council-records/polychat/`, and in a project's `councils` folder when you ask for a copy there.
 
 Local data lives in:
 
@@ -117,6 +126,7 @@ The plugin exposes:
 - `wait_for_events`
 - `run_council`
 - `stop_council`
+- `save_minutes_to_project`
 - `end_meeting`
 
 The v0 tools (`post_message`, `ask_claude`, `ask_codex`, `configure_claude`) remain as compatibility aliases.

@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.2.0
+
+### Added
+- **Minutes that last.** Every finished council is saved as a Markdown record in `~/Documents/council-records/polychat/`: the decision first, then the blind ranking, every answer, and the cross-examination. Set `POLYCHAT_RECORDS_DIR` to keep records elsewhere. A Polychat running with its own data folder (`POLYCHAT_DATA_DIR`) keeps its records beside that data, so test and development copies never write into your real records.
+- **Save to project.** One click under the minutes puts a copy in the project's `councils` folder, where the collaborators working there can read it. Agents do the same with the new `save_minutes_to_project` MCP tool. Clicking a saved record shows it in Finder.
+- **What each mind brings.** Clicking a collaborator shows what it brings into the room:
+  - its project folder;
+  - the instruction files its runtime reads there (CLAUDE.md and rules for Claude Code, AGENTS.md for Codex, Grok Build and Kimi Code, including your global ones);
+  - Claude Code's saved memory notes for the project;
+  - the conversation it continues, by name, with when it started and when it was last active, or that it starts fresh;
+  - how much it has said in this room.
+- `read_room` reports where the latest council's minutes were saved.
+
+### Fixed
+- Claude Code sessions in the context picker show the name the session was given, instead of its random nickname.
+- Collaborators added at the same instant keep the order they were added in, so a council's seats and first-choice lists no longer shuffle between reloads.
+
 ## 1.1.0
 
 - Added real Grok Build and Kimi Code peers behind a shared runtime-adapter registry.

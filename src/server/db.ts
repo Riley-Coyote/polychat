@@ -138,6 +138,8 @@ addColumn("rooms", "host_expires_at", "TEXT");
 addColumn("rooms", "archived_at", "TEXT");
 addColumn("rooms", "updated_at", "TEXT");
 db.prepare("UPDATE rooms SET updated_at = COALESCE(updated_at, created_at)").run();
+addColumn("councils", "record_path", "TEXT");
+addColumn("councils", "project_record_path", "TEXT");
 
 function importLegacyDatabase() {
   if (!existsSync(legacyPath) || legacyPath === databasePath) return;
@@ -190,13 +192,13 @@ seedLegacyRoom();
 
 type RoomRow = { id: string; name: string; project_cwd: string | null; meeting_status: MeetingStatus; host_agent_id: string | null; host_expires_at: string | null; archived_at: string | null; created_at: string; updated_at: string };
 type AgentRow = { id: string; name: string; runtime: Runtime; model: string | null; cwd: string | null; session_id: string | null; status: Agent["status"]; created_at: string; updated_at: string };
-type CouncilRow = { id: string; room_id: string; question: string; agent_ids: string; phase: CouncilPhase; results: string; chair_agent_id: string | null; error: string | null; created_at: string; updated_at: string };
+type CouncilRow = { id: string; room_id: string; question: string; agent_ids: string; phase: CouncilPhase; results: string; chair_agent_id: string | null; error: string | null; record_path: string | null; project_record_path: string | null; created_at: string; updated_at: string };
 type MessageRow = { id: string; room_id: string; sender_id: string; sender_name: string; sender_runtime: Runtime; content: string; status: MessageStatus; reply_to: string | null; metadata: string; created_at: string; updated_at: string };
 
 const mapRoom = (row: RoomRow): Room => ({ id: row.id, name: row.name, projectCwd: row.project_cwd, meetingStatus: row.meeting_status, hostAgentId: row.host_agent_id, hostExpiresAt: row.host_expires_at, archivedAt: row.archived_at, createdAt: row.created_at, updatedAt: row.updated_at });
 const mapAgent = (row: AgentRow): Agent => ({ id: row.id, name: row.name, runtime: row.runtime, model: row.model, cwd: row.cwd, sessionId: row.session_id, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at });
 const mapMessage = (row: MessageRow): ChatMessage => ({ id: row.id, roomId: row.room_id, senderId: row.sender_id, senderName: row.sender_name, senderRuntime: row.sender_runtime, content: row.content, status: row.status, replyTo: row.reply_to, metadata: JSON.parse(row.metadata) as Record<string, unknown>, createdAt: row.created_at, updatedAt: row.updated_at });
-const mapCouncil = (row: CouncilRow): Council => ({ id: row.id, roomId: row.room_id, question: row.question, agentIds: JSON.parse(row.agent_ids) as string[], phase: row.phase, results: JSON.parse(row.results) as CouncilResults, chairAgentId: row.chair_agent_id, error: row.error, createdAt: row.created_at, updatedAt: row.updated_at });
+const mapCouncil = (row: CouncilRow): Council => ({ id: row.id, roomId: row.room_id, question: row.question, agentIds: JSON.parse(row.agent_ids) as string[], phase: row.phase, results: JSON.parse(row.results) as CouncilResults, chairAgentId: row.chair_agent_id, error: row.error, recordPath: row.record_path, projectRecordPath: row.project_record_path, createdAt: row.created_at, updatedAt: row.updated_at });
 const messageSelect = `SELECT messages.*, agents.name AS sender_name, agents.runtime AS sender_runtime FROM messages JOIN agents ON agents.id = messages.sender_id`;
 
 export function listRooms(includeArchived = false): Room[] {
@@ -226,7 +228,7 @@ export function updateRoom(id: string, patch: Partial<Pick<Room, "name" | "proje
 }
 
 export function listAgents(roomId = "common-room"): Agent[] {
-  return (db.prepare(`SELECT agents.* FROM agents JOIN room_agents ON room_agents.agent_id = agents.id WHERE room_agents.room_id = ? ORDER BY CASE agents.runtime WHEN 'human' THEN 0 WHEN 'codex' THEN 1 ELSE 2 END, agents.created_at`).all(roomId) as AgentRow[]).map(mapAgent);
+  return (db.prepare(`SELECT agents.* FROM agents JOIN room_agents ON room_agents.agent_id = agents.id WHERE room_agents.room_id = ? ORDER BY CASE agents.runtime WHEN 'human' THEN 0 WHEN 'codex' THEN 1 ELSE 2 END, agents.created_at, agents.rowid`).all(roomId) as AgentRow[]).map(mapAgent);
 }
 
 export function getAgent(id: string): Agent | undefined {
@@ -262,6 +264,10 @@ export function updateAgent(id: string, patch: Partial<Pick<Agent, "name" | "mod
 
 export function listMessages(roomId = "common-room", limit = 200): ChatMessage[] {
   return (db.prepare(`${messageSelect} WHERE messages.room_id = ? ORDER BY messages.created_at DESC LIMIT ?`).all(roomId, limit) as MessageRow[]).reverse().map(mapMessage);
+}
+
+export function listCouncilMessages(councilId: string): ChatMessage[] {
+  return (db.prepare(`${messageSelect} WHERE json_extract(messages.metadata, '$.councilId') = ? ORDER BY messages.created_at, messages.rowid`).all(councilId) as MessageRow[]).map(mapMessage);
 }
 
 export function getMessage(id: string): ChatMessage | undefined {
@@ -300,10 +306,10 @@ export function listCouncils(roomId: string, limit = 20): Council[] {
   return (db.prepare("SELECT * FROM councils WHERE room_id = ? ORDER BY created_at DESC LIMIT ?").all(roomId, limit) as CouncilRow[]).reverse().map(mapCouncil);
 }
 
-export function updateCouncil(id: string, patch: Partial<Pick<Council, "phase" | "results" | "chairAgentId" | "error">>): Council {
+export function updateCouncil(id: string, patch: Partial<Pick<Council, "phase" | "results" | "chairAgentId" | "error" | "recordPath" | "projectRecordPath">>): Council {
   const current = getCouncil(id); if (!current) throw new Error(`Unknown council: ${id}`);
   const next = { ...current, ...patch };
-  db.prepare("UPDATE councils SET phase = ?, results = ?, chair_agent_id = ?, error = ?, updated_at = ? WHERE id = ?")
-    .run(next.phase, JSON.stringify(next.results), next.chairAgentId, next.error, now(), id);
+  db.prepare("UPDATE councils SET phase = ?, results = ?, chair_agent_id = ?, error = ?, record_path = ?, project_record_path = ?, updated_at = ? WHERE id = ?")
+    .run(next.phase, JSON.stringify(next.results), next.chairAgentId, next.error, next.recordPath, next.projectRecordPath, now(), id);
   return getCouncil(id)!;
 }

@@ -5682,17 +5682,17 @@ var require_on_finished = __commonJS({
     function attachFinishedListener(msg, callback) {
       var eeMsg;
       var eeSocket;
-      var finished = false;
+      var finished2 = false;
       function onFinish(error) {
         eeMsg.cancel();
         eeSocket.cancel();
-        finished = true;
+        finished2 = true;
         callback(error);
       }
       eeMsg = eeSocket = first([[msg, "end", "finish"]], onFinish);
       function onSocket(socket) {
         msg.removeListener("socket", onSocket);
-        if (finished) return;
+        if (finished2) return;
         if (eeMsg !== eeSocket) return;
         eeSocket = first([[socket, "error", "close"]], onFinish);
       }
@@ -19020,10 +19020,10 @@ var require_view = __commonJS({
     var debug = require_src()("express:view");
     var path = require("node:path");
     var fs = require("node:fs");
-    var dirname7 = path.dirname;
-    var basename6 = path.basename;
+    var dirname9 = path.dirname;
+    var basename7 = path.basename;
     var extname = path.extname;
-    var join11 = path.join;
+    var join13 = path.join;
     var resolve3 = path.resolve;
     module2.exports = View;
     function View(name, options) {
@@ -19059,8 +19059,8 @@ var require_view = __commonJS({
       for (var i = 0; i < roots.length && !path2; i++) {
         var root3 = roots[i];
         var loc = resolve3(root3, name);
-        var dir = dirname7(loc);
-        var file = basename6(loc);
+        var dir = dirname9(loc);
+        var file = basename7(loc);
         path2 = this.resolve(dir, file);
       }
       return path2;
@@ -19085,12 +19085,12 @@ var require_view = __commonJS({
     };
     View.prototype.resolve = function resolve4(dir, file) {
       var ext = this.ext;
-      var path2 = join11(dir, file);
+      var path2 = join13(dir, file);
       var stat = tryStat(path2);
       if (stat && stat.isFile()) {
         return path2;
       }
-      path2 = join11(dir, basename6(file, ext), "index" + ext);
+      path2 = join13(dir, basename7(file, ext), "index" + ext);
       stat = tryStat(path2);
       if (stat && stat.isFile()) {
         return path2;
@@ -22537,9 +22537,9 @@ var require_content_disposition = __commonJS({
       if (typeof fallback === "string" && NON_LATIN1_REGEXP.test(fallback)) {
         throw new TypeError("fallback must be ISO-8859-1 string");
       }
-      var name = basename6(filename);
+      var name = basename7(filename);
       var isQuotedString = TEXT_REGEXP.test(name);
-      var fallbackName = typeof fallback !== "string" ? fallback && getlatin1(name) : basename6(fallback);
+      var fallbackName = typeof fallback !== "string" ? fallback && getlatin1(name) : basename7(fallback);
       var hasFallback = typeof fallbackName === "string" && fallbackName !== name;
       if (hasFallback || !isQuotedString || hasHexEscape(name)) {
         params["filename*"] = name;
@@ -22659,7 +22659,7 @@ var require_content_disposition = __commonJS({
       this.type = type;
       this.parameters = parameters;
     }
-    function basename6(path) {
+    function basename7(path) {
       const normalized = path.replaceAll("\\", "/");
       let end = normalized.length;
       while (end > 0 && normalized[end - 1] === "/") {
@@ -22911,7 +22911,7 @@ var require_send = __commonJS({
     var Stream = require("stream");
     var util = require("util");
     var extname = path.extname;
-    var join11 = path.join;
+    var join13 = path.join;
     var normalize = path.normalize;
     var resolve3 = path.resolve;
     var sep2 = path.sep;
@@ -23083,7 +23083,7 @@ var require_send = __commonJS({
           return res;
         }
         parts = path2.split(sep2);
-        path2 = normalize(join11(root3, path2));
+        path2 = normalize(join13(root3, path2));
       } else {
         if (UP_PATH_REGEXP.test(path2)) {
           debug('malicious path "%s"', path2);
@@ -23216,7 +23216,7 @@ var require_send = __commonJS({
           if (err) return self.onStatError(err);
           return self.error(404);
         }
-        var p = join11(path2, self._index[i]);
+        var p = join13(path2, self._index[i]);
         debug('stat "%s"', p);
         fs.stat(p, function(err2, stat) {
           if (err2) return next(err2);
@@ -23304,8 +23304,8 @@ var require_send = __commonJS({
     function contentRange(type, size, range) {
       return type + " " + (range ? range.start + "-" + range.end : "*") + "/" + size;
     }
-    function createHtmlDocument(title, body) {
-      return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>' + title + "</title>\n</head>\n<body>\n<pre>" + body + "</pre>\n</body>\n</html>\n";
+    function createHtmlDocument(title2, body) {
+      return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>' + title2 + "</title>\n</head>\n<body>\n<pre>" + body + "</pre>\n</body>\n</html>\n";
     }
     function createHttpError(status, err) {
       if (!err) {
@@ -23990,8 +23990,8 @@ var require_serve_static = __commonJS({
       }
       return i > 1 ? "/" + str.substr(i) : str;
     }
-    function createHtmlDocument(title, body) {
-      return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>' + title + "</title>\n</head>\n<body>\n<pre>" + body + "</pre>\n</body>\n</html>\n";
+    function createHtmlDocument(title2, body) {
+      return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>' + title2 + "</title>\n</head>\n<body>\n<pre>" + body + "</pre>\n</body>\n</html>\n";
     }
     function createNotFoundDirectoryListener() {
       return function notFound() {
@@ -24071,8 +24071,8 @@ var require_express2 = __commonJS({
 
 // src/server/index.ts
 var import_express = __toESM(require_express2(), 1);
-var import_node_fs11 = require("node:fs");
-var import_node_path11 = require("node:path");
+var import_node_fs13 = require("node:fs");
+var import_node_path13 = require("node:path");
 
 // src/server/db.ts
 var import_node_sqlite = require("node:sqlite");
@@ -24211,6 +24211,8 @@ addColumn("rooms", "host_expires_at", "TEXT");
 addColumn("rooms", "archived_at", "TEXT");
 addColumn("rooms", "updated_at", "TEXT");
 db.prepare("UPDATE rooms SET updated_at = COALESCE(updated_at, created_at)").run();
+addColumn("councils", "record_path", "TEXT");
+addColumn("councils", "project_record_path", "TEXT");
 function importLegacyDatabase() {
   if (!(0, import_node_fs.existsSync)(legacyPath) || legacyPath === databasePath) return;
   let legacy = null;
@@ -24262,7 +24264,7 @@ seedLegacyRoom();
 var mapRoom = (row) => ({ id: row.id, name: row.name, projectCwd: row.project_cwd, meetingStatus: row.meeting_status, hostAgentId: row.host_agent_id, hostExpiresAt: row.host_expires_at, archivedAt: row.archived_at, createdAt: row.created_at, updatedAt: row.updated_at });
 var mapAgent = (row) => ({ id: row.id, name: row.name, runtime: row.runtime, model: row.model, cwd: row.cwd, sessionId: row.session_id, status: row.status, createdAt: row.created_at, updatedAt: row.updated_at });
 var mapMessage = (row) => ({ id: row.id, roomId: row.room_id, senderId: row.sender_id, senderName: row.sender_name, senderRuntime: row.sender_runtime, content: row.content, status: row.status, replyTo: row.reply_to, metadata: JSON.parse(row.metadata), createdAt: row.created_at, updatedAt: row.updated_at });
-var mapCouncil = (row) => ({ id: row.id, roomId: row.room_id, question: row.question, agentIds: JSON.parse(row.agent_ids), phase: row.phase, results: JSON.parse(row.results), chairAgentId: row.chair_agent_id, error: row.error, createdAt: row.created_at, updatedAt: row.updated_at });
+var mapCouncil = (row) => ({ id: row.id, roomId: row.room_id, question: row.question, agentIds: JSON.parse(row.agent_ids), phase: row.phase, results: JSON.parse(row.results), chairAgentId: row.chair_agent_id, error: row.error, recordPath: row.record_path, projectRecordPath: row.project_record_path, createdAt: row.created_at, updatedAt: row.updated_at });
 var messageSelect = `SELECT messages.*, agents.name AS sender_name, agents.runtime AS sender_runtime FROM messages JOIN agents ON agents.id = messages.sender_id`;
 function listRooms(includeArchived = false) {
   return db.prepare(`SELECT * FROM rooms ${includeArchived ? "" : "WHERE archived_at IS NULL"} ORDER BY updated_at DESC`).all().map(mapRoom);
@@ -24286,7 +24288,7 @@ function updateRoom(id, patch) {
   return getRoom(id);
 }
 function listAgents(roomId = "common-room") {
-  return db.prepare(`SELECT agents.* FROM agents JOIN room_agents ON room_agents.agent_id = agents.id WHERE room_agents.room_id = ? ORDER BY CASE agents.runtime WHEN 'human' THEN 0 WHEN 'codex' THEN 1 ELSE 2 END, agents.created_at`).all(roomId).map(mapAgent);
+  return db.prepare(`SELECT agents.* FROM agents JOIN room_agents ON room_agents.agent_id = agents.id WHERE room_agents.room_id = ? ORDER BY CASE agents.runtime WHEN 'human' THEN 0 WHEN 'codex' THEN 1 ELSE 2 END, agents.created_at, agents.rowid`).all(roomId).map(mapAgent);
 }
 function getAgent(id) {
   const row = db.prepare("SELECT * FROM agents WHERE id = ?").get(id);
@@ -24318,6 +24320,9 @@ function updateAgent(id, patch) {
 }
 function listMessages(roomId = "common-room", limit = 200) {
   return db.prepare(`${messageSelect} WHERE messages.room_id = ? ORDER BY messages.created_at DESC LIMIT ?`).all(roomId, limit).reverse().map(mapMessage);
+}
+function listCouncilMessages(councilId) {
+  return db.prepare(`${messageSelect} WHERE json_extract(messages.metadata, '$.councilId') = ? ORDER BY messages.created_at, messages.rowid`).all(councilId).map(mapMessage);
 }
 function getMessage(id) {
   const row = db.prepare(`${messageSelect} WHERE messages.id = ?`).get(id);
@@ -24353,7 +24358,7 @@ function updateCouncil(id, patch) {
   const current = getCouncil(id);
   if (!current) throw new Error(`Unknown council: ${id}`);
   const next = { ...current, ...patch };
-  db.prepare("UPDATE councils SET phase = ?, results = ?, chair_agent_id = ?, error = ?, updated_at = ? WHERE id = ?").run(next.phase, JSON.stringify(next.results), next.chairAgentId, next.error, now(), id);
+  db.prepare("UPDATE councils SET phase = ?, results = ?, chair_agent_id = ?, error = ?, record_path = ?, project_record_path = ?, updated_at = ? WHERE id = ?").run(next.phase, JSON.stringify(next.results), next.chairAgentId, next.error, next.recordPath, next.projectRecordPath, now(), id);
   return getCouncil(id);
 }
 
@@ -24390,6 +24395,150 @@ function publish(roomId, payload) {
   return event;
 }
 
+// src/server/records.ts
+var import_node_child_process = require("node:child_process");
+var import_node_fs2 = require("node:fs");
+var import_node_os2 = require("node:os");
+var import_node_path2 = require("node:path");
+
+// src/shared/council.ts
+var listNames = (names) => names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+function selfPlacementNote(council, nameOf2) {
+  const { labels = {}, ballots = {} } = council.results;
+  const places = Object.entries(ballots).map(([ranker, ballot]) => ({ ranker, place: ballot.indexOf(Object.entries(labels).find(([, id]) => id === ranker)?.[0] ?? ""), size: ballot.length }));
+  const first = places.filter((entry) => entry.place === 0).map((entry) => nameOf2(entry.ranker));
+  const last = places.filter((entry) => entry.size > 1 && entry.place === entry.size - 1).map((entry) => nameOf2(entry.ranker));
+  return [
+    first.length ? `${listNames(first)} ranked ${first.length === 1 ? "its own answer" : "their own answers"} first.` : "No one ranked their own answer first.",
+    last.length ? `${listNames(last)} ranked ${last.length === 1 ? "its own" : "their own"} last.` : ""
+  ].filter(Boolean).join(" ");
+}
+function chairStanding(council, chairId) {
+  const { order = [], points = {}, firstPlaceVotes = {} } = council.results;
+  if (order[0] !== chairId) return null;
+  const tied = order.length > 1 && points[order[1]] === points[chairId] && (firstPlaceVotes[order[1]]?.length ?? 0) === (firstPlaceVotes[chairId]?.length ?? 0);
+  return tied ? "tied for first in the blind round" : "ranked first in the blind round";
+}
+function councilProjectDir(room, agents, council) {
+  if (room.projectCwd) return room.projectCwd;
+  const folders = new Set(council.agentIds.map((id) => agents.find((agent) => agent.id === id)?.cwd ?? null));
+  const [only] = folders;
+  return folders.size === 1 && only ? only : null;
+}
+
+// src/server/records.ts
+var runtimeNames = { human: "Human", codex: "Codex", "claude-code": "Claude Code", grok: "Grok Build", "kimi-code": "Kimi Code" };
+var trailingFiller = /\s+(?:a|an|and|are|as|at|be|but|by|for|from|in|is|of|on|or|the|to|with)$/i;
+function recordsDir() {
+  if (process.env.POLYCHAT_RECORDS_DIR) return process.env.POLYCHAT_RECORDS_DIR;
+  if (process.env.POLYCHAT_DATA_DIR) return (0, import_node_path2.join)(process.env.POLYCHAT_DATA_DIR, "records");
+  return (0, import_node_path2.join)((0, import_node_os2.homedir)(), "Documents", "council-records", "polychat");
+}
+function localDate(iso) {
+  const date = new Date(iso);
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+function recordTitle(question) {
+  let title2 = question.replace(/\s+/g, " ").trim();
+  if (title2.length > 72) title2 = title2.slice(0, 72).replace(/\s+\S*$/, "");
+  title2 = title2.replace(/[/\\:*?"<>|]+/g, " ").replace(/^[\s.]+/, "").replace(/\s+/g, " ");
+  for (let previous = ""; previous !== title2; ) {
+    previous = title2;
+    title2 = title2.replace(/[\s.,;:!?'‘’“”()\-–—]+$/, "").replace(trailingFiller, "");
+  }
+  return title2 || "Council";
+}
+function memberLabel(agent) {
+  const details = [agent.name === runtimeNames[agent.runtime] ? null : runtimeNames[agent.runtime], agent.model && agent.model !== "current" ? agent.model : null].filter(Boolean);
+  return details.length ? `${agent.name} (${details.join(", ")})` : agent.name;
+}
+var demote = (markdown) => markdown.replace(/^(#{1,5})(?=\s)/gm, "#$1");
+var title = (position) => position.charAt(0) + position.slice(1).toLowerCase();
+var finished = (messages) => messages.find((message) => message.metadata.councilRole === "minutes" && message.status === "complete");
+function splitMinutes(content) {
+  const match = content.trim().match(/^#[ \t]+(.+?)[ \t#]*(?:\n|$)/);
+  const headline = match?.[1].replace(/\*\*/g, "").trim() || null;
+  return { headline: headline && !/^(?:the\s+)?(?:council\s+)?minutes$/i.test(headline) ? headline : null, body: (match ? content.trim().slice(match[0].length) : content).trim() };
+}
+function councilMarkdown({ council, room, agents, messages }) {
+  const nameOf2 = (id) => agents.find((agent) => agent.id === id)?.name ?? "A member";
+  const said = (role) => messages.filter((message) => message.metadata.councilRole === role && message.status !== "streaming");
+  const { order = [], points = {}, firstPlaceVotes = {}, labels = {}, positions = {} } = council.results;
+  const members = council.agentIds.map((id) => agents.find((agent) => agent.id === id)).filter((agent) => Boolean(agent));
+  const minutes = finished(messages);
+  const { headline, body } = splitMinutes(minutes?.content ?? "");
+  const lines = [`# ${headline ?? room.name}`, "", `*Polychat council \xB7 ${localDate(council.createdAt)}${headline ? ` \xB7 ${room.name}` : ""} \xB7 ${members.map(memberLabel).join(" \xB7 ")}*`, "", "## Question", "", council.question.trim(), ""];
+  const standing = minutes ? chairStanding(council, minutes.senderId) : null;
+  if (minutes) lines.push("## Minutes", "", `*Chaired by ${minutes.senderName}${standing ? `, ${standing}` : ""}*`, "", demote(body), "");
+  const answers = said("blind");
+  if (answers.length) {
+    lines.push("## Blind answers", "", "Answered in parallel and sealed until everyone was in.", "");
+    for (const answer of answers) lines.push(`### ${answer.senderName}`, "", answer.status === "complete" ? answer.content.trim() : `*${answer.senderName} couldn't answer.*${answer.content.trim() ? `
+
+${answer.content.trim()}` : ""}`, "");
+  }
+  if (order.length) {
+    lines.push("## Blind ranking", "", "Each member ranked every answer with the authors hidden and shuffled.", "");
+    order.forEach((id, index) => {
+      const firsts = firstPlaceVotes[id] ?? [];
+      lines.push(`${index + 1}. ${nameOf2(id)}: ${points[id] ?? 0} point${points[id] === 1 ? "" : "s"}${firsts.length ? `, first choice of ${listNames(firsts.map(nameOf2))}` : ""}`);
+    });
+    lines.push("", selfPlacementNote(council, nameOf2));
+    const key = Object.entries(labels).sort(([a], [b]) => a.localeCompare(b)).map(([letter, id]) => `${letter} was ${nameOf2(id)}`).join(" \xB7 ");
+    if (key) lines.push("", `Answer letters: ${key}`);
+    const ballots = said("ranking").filter((message) => message.status === "complete" && message.content.trim());
+    if (ballots.length) {
+      lines.push("", "Ballots:");
+      for (const ballot of ballots) lines.push("", `**${ballot.senderName}**`, "", "```", ballot.content.trim(), "```");
+    }
+    lines.push("");
+  }
+  const responses = said("response");
+  if (responses.length) {
+    lines.push("## Cross-examination", "");
+    for (const response of responses) lines.push(`### ${response.senderName}${positions[response.senderId] ? `: ${title(positions[response.senderId])}` : ""}`, "", response.status === "complete" ? response.content.trim() : `*${response.senderName} couldn't respond.*${response.content.trim() ? `
+
+${response.content.trim()}` : ""}`, "");
+  }
+  return `${lines.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd()}
+`;
+}
+function writeRecord(directory, name, content, previous) {
+  (0, import_node_fs2.mkdirSync)(directory, { recursive: true });
+  if (previous && (0, import_node_path2.dirname)(previous) === directory && (0, import_node_fs2.existsSync)(previous)) {
+    (0, import_node_fs2.writeFileSync)(previous, content);
+    return previous;
+  }
+  let path = (0, import_node_path2.join)(directory, `${name}.md`);
+  for (let copy = 2; (0, import_node_fs2.existsSync)(path); copy += 1) path = (0, import_node_path2.join)(directory, `${name} ${copy}.md`);
+  (0, import_node_fs2.writeFileSync)(path, content, { flag: "wx" });
+  return path;
+}
+function saveCouncilRecord(councilId, target) {
+  const council = getCouncil(councilId);
+  if (!council) throw new Error("Unknown council.");
+  if (council.phase !== "complete") throw new Error("The minutes aren't written yet.");
+  const room = getRoom(council.roomId);
+  if (!room) throw new Error("Room not found.");
+  const agents = council.agentIds.map(getAgent).filter((agent) => Boolean(agent));
+  const messages = listCouncilMessages(council.id);
+  const content = councilMarkdown({ council, room, agents, messages });
+  const name = `${localDate(council.createdAt)} ${recordTitle(splitMinutes(finished(messages)?.content ?? "").headline ?? council.question)}`;
+  if (target === "records") return updateCouncil(council.id, { recordPath: writeRecord(recordsDir(), name, content, council.recordPath) });
+  const project = councilProjectDir(room, agents, council);
+  if (!project) throw new Error("This room isn't tied to a project folder.");
+  if (!(0, import_node_fs2.existsSync)(project)) throw new Error(`The project folder isn't there anymore: ${project}`);
+  return updateCouncil(council.id, { projectRecordPath: writeRecord((0, import_node_path2.join)(project, "councils"), name, content, council.projectRecordPath) });
+}
+function revealCouncilRecord(council, target) {
+  const path = target === "records" ? council.recordPath : council.projectRecordPath;
+  if (!path || !(0, import_node_fs2.existsSync)(path)) throw new Error("That record isn't where Polychat saved it anymore.");
+  (0, import_node_child_process.execFile)("/usr/bin/open", ["-R", path], (error) => {
+    if (error) console.error("Polychat couldn't reveal a record:", error);
+  });
+}
+
 // src/server/runtimes/contracts.ts
 var PolychatRuntimeError = class extends Error {
   constructor(detail) {
@@ -24399,26 +24548,26 @@ var PolychatRuntimeError = class extends Error {
 };
 
 // src/server/runtimes/adapters/claude.ts
-var import_node_child_process2 = require("node:child_process");
+var import_node_child_process3 = require("node:child_process");
 
 // src/server/claudeContexts.ts
-var import_node_fs2 = require("node:fs");
-var import_node_os2 = require("node:os");
-var import_node_path2 = require("node:path");
-var claudeProjectsRoot = (0, import_node_path2.join)((0, import_node_os2.homedir)(), ".claude", "projects");
-var claudeHistoryPath = (0, import_node_path2.join)((0, import_node_os2.homedir)(), ".claude", "history.jsonl");
+var import_node_fs3 = require("node:fs");
+var import_node_os3 = require("node:os");
+var import_node_path3 = require("node:path");
+var claudeProjectsRoot = (0, import_node_path3.join)((0, import_node_os3.homedir)(), ".claude", "projects");
+var claudeHistoryPath = (0, import_node_path3.join)((0, import_node_os3.homedir)(), ".claude", "history.jsonl");
 var projectCache = /* @__PURE__ */ new Map();
 var sessionCache = /* @__PURE__ */ new Map();
 var cacheTtl = 3e4;
 var historyCache = null;
 function readSlice(path, offset, length) {
-  const descriptor5 = (0, import_node_fs2.openSync)(path, "r");
+  const descriptor5 = (0, import_node_fs3.openSync)(path, "r");
   try {
     const buffer = Buffer.alloc(length);
-    const bytesRead = (0, import_node_fs2.readSync)(descriptor5, buffer, 0, length, offset);
+    const bytesRead = (0, import_node_fs3.readSync)(descriptor5, buffer, 0, length, offset);
     return buffer.subarray(0, bytesRead).toString("utf8");
   } finally {
-    (0, import_node_fs2.closeSync)(descriptor5);
+    (0, import_node_fs3.closeSync)(descriptor5);
   }
 }
 function parseLines(text, trimEdges = false) {
@@ -24446,11 +24595,11 @@ function cleanPreview(value, limit = 180) {
   return value.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, limit);
 }
 function loadInteractiveHistory() {
-  if (!(0, import_node_fs2.existsSync)(claudeHistoryPath)) return /* @__PURE__ */ new Map();
-  const stats = (0, import_node_fs2.statSync)(claudeHistoryPath);
+  if (!(0, import_node_fs3.existsSync)(claudeHistoryPath)) return /* @__PURE__ */ new Map();
+  const stats = (0, import_node_fs3.statSync)(claudeHistoryPath);
   if (historyCache?.mtime === stats.mtimeMs) return historyCache.value;
   const projects = /* @__PURE__ */ new Map();
-  const lines = (0, import_node_fs2.readFileSync)(claudeHistoryPath, "utf8").split("\n");
+  const lines = (0, import_node_fs3.readFileSync)(claudeHistoryPath, "utf8").split("\n");
   for (const line of lines) {
     if (!line.trim()) continue;
     try {
@@ -24497,7 +24646,7 @@ function isMaintenanceSession(session) {
   return /(?:^|\s)#?\s*Memory Extractor\b/i.test(sample) || /memory extraction system/i.test(sample) || /memory relationship classifier/i.test(sample) || /extract structured memories/i.test(sample);
 }
 function inspectTranscript(path) {
-  const stats = (0, import_node_fs2.statSync)(path);
+  const stats = (0, import_node_fs3.statSync)(path);
   const headLength = Math.min(stats.size, 512 * 1024);
   const tailLength = Math.min(stats.size, 256 * 1024);
   const head = parseLines(readSlice(path, 0, headLength));
@@ -24512,14 +24661,16 @@ function inspectTranscript(path) {
   const lastUser = [...tail].reverse().find((record) => record.type === "user" && record.message?.role === "user");
   const preview = cleanPreview(textContent(firstUser?.message?.content));
   const lastPrompt = cleanPreview(lastPromptRecord?.lastPrompt ?? textContent(lastUser?.message?.content));
-  const sessionId = sessionRecord?.sessionId ?? (0, import_node_path2.basename)(path, ".jsonl");
+  const sessionId = sessionRecord?.sessionId ?? (0, import_node_path3.basename)(path, ".jsonl");
   const slug = records4.find((record) => record.slug)?.slug;
+  const customTitle = cleanPreview([...records4].reverse().find((record) => record.type === "custom-title" && record.customTitle)?.customTitle ?? "", 82) || null;
   const createdAt = firstUser?.timestamp ?? cwdRecord?.timestamp ?? sessionRecord?.timestamp ?? null;
   return {
     cwd: cwdRecord?.cwd ?? null,
+    customTitle,
     session: {
       id: sessionId,
-      title: titleFrom(slug, preview),
+      title: customTitle ?? titleFrom(slug, preview),
       preview,
       lastPrompt,
       branch: branchRecord?.gitBranch ?? null,
@@ -24532,9 +24683,9 @@ function inspectTranscript(path) {
   };
 }
 function sessionFiles(projectDirectory) {
-  return (0, import_node_fs2.readdirSync)(projectDirectory, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".jsonl")).map((entry) => {
-    const path = (0, import_node_path2.join)(projectDirectory, entry.name);
-    const stats = (0, import_node_fs2.statSync)(path);
+  return (0, import_node_fs3.readdirSync)(projectDirectory, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith(".jsonl")).map((entry) => {
+    const path = (0, import_node_path3.join)(projectDirectory, entry.name);
+    const stats = (0, import_node_fs3.statSync)(path);
     return { path, mtime: stats.mtimeMs };
   }).sort((a, b) => b.mtime - a.mtime);
 }
@@ -24542,30 +24693,30 @@ function listClaudeProjects(query = "") {
   const normalizedQuery = query.trim().toLowerCase();
   const cached = projectCache.get(normalizedQuery);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
-  if (!(0, import_node_fs2.existsSync)(claudeProjectsRoot)) return [];
+  if (!(0, import_node_fs3.existsSync)(claudeProjectsRoot)) return [];
   const interactiveHistory = loadInteractiveHistory();
-  const directories = (0, import_node_fs2.readdirSync)(claudeProjectsRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory()).filter((entry) => !normalizedQuery || entry.name.toLowerCase().includes(normalizedQuery));
+  const directories = (0, import_node_fs3.readdirSync)(claudeProjectsRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory()).filter((entry) => !normalizedQuery || entry.name.toLowerCase().includes(normalizedQuery));
   const projects = [];
   for (const directory of directories) {
-    const projectDirectory = (0, import_node_path2.join)(claudeProjectsRoot, directory.name);
+    const projectDirectory = (0, import_node_path3.join)(claudeProjectsRoot, directory.name);
     const files2 = sessionFiles(projectDirectory);
     if (!files2.length) continue;
     try {
       const latest = inspectTranscript(files2[0].path);
       if (!latest.cwd) continue;
-      const searchText = `${latest.cwd} ${(0, import_node_path2.basename)(latest.cwd)}`.toLowerCase();
+      const searchText = `${latest.cwd} ${(0, import_node_path3.basename)(latest.cwd)}`.toLowerCase();
       if (normalizedQuery && !searchText.includes(normalizedQuery) && !directory.name.toLowerCase().includes(normalizedQuery)) continue;
       const history = interactiveHistory.get(latest.cwd);
       projects.push({
         id: directory.name,
         runtime: "claude-code",
-        name: (0, import_node_path2.basename)(latest.cwd) || latest.cwd,
+        name: (0, import_node_path3.basename)(latest.cwd) || latest.cwd,
         cwd: latest.cwd,
-        parentPath: (0, import_node_path2.dirname)(latest.cwd),
+        parentPath: (0, import_node_path3.dirname)(latest.cwd),
         updatedAt: new Date(history?.lastTimestamp ?? files2[0].mtime).toISOString(),
         sessionCount: history?.sessions.size ?? 0,
-        hasMemory: (0, import_node_fs2.existsSync)((0, import_node_path2.join)(projectDirectory, "memory", "MEMORY.md")),
-        exists: (0, import_node_fs2.existsSync)(latest.cwd)
+        hasMemory: (0, import_node_fs3.existsSync)((0, import_node_path3.join)(projectDirectory, "memory", "MEMORY.md")),
+        exists: (0, import_node_fs3.existsSync)(latest.cwd)
       });
     } catch (error) {
       console.warn(`Could not inspect Claude project ${directory.name}:`, error);
@@ -24575,12 +24726,36 @@ function listClaudeProjects(query = "") {
   projectCache.set(normalizedQuery, { expiresAt: Date.now() + cacheTtl, value });
   return value;
 }
+function claudeProjectDir(cwd) {
+  return (0, import_node_path3.join)(claudeProjectsRoot, cwd.replace(/[^a-zA-Z0-9]/g, "-"));
+}
+function findClaudeSession(sessionId, cwd) {
+  const file = `${(0, import_node_path3.basename)(sessionId)}.jsonl`;
+  let path = cwd ? (0, import_node_path3.join)(claudeProjectDir(cwd), file) : "";
+  if (!path || !(0, import_node_fs3.existsSync)(path)) {
+    path = "";
+    if ((0, import_node_fs3.existsSync)(claudeProjectsRoot)) for (const entry of (0, import_node_fs3.readdirSync)(claudeProjectsRoot, { withFileTypes: true })) {
+      const candidate = (0, import_node_path3.join)(claudeProjectsRoot, entry.name, file);
+      if (entry.isDirectory() && (0, import_node_fs3.existsSync)(candidate)) {
+        path = candidate;
+        break;
+      }
+    }
+  }
+  if (!path) return null;
+  try {
+    const { customTitle, session } = inspectTranscript(path);
+    return customTitle || !session.preview ? session : { ...session, title: titleFrom(void 0, session.preview) };
+  } catch {
+    return null;
+  }
+}
 function listClaudeSessions(projectId, limit = 30) {
-  const safeProjectId = (0, import_node_path2.basename)(projectId);
+  const safeProjectId = (0, import_node_path3.basename)(projectId);
   const cached = sessionCache.get(safeProjectId);
   if (cached && cached.expiresAt > Date.now()) return cached.value.slice(0, limit);
-  const projectDirectory = (0, import_node_path2.join)(claudeProjectsRoot, safeProjectId);
-  if (!(0, import_node_fs2.existsSync)(projectDirectory)) return [];
+  const projectDirectory = (0, import_node_path3.join)(claudeProjectsRoot, safeProjectId);
+  if (!(0, import_node_fs3.existsSync)(projectDirectory)) return [];
   const sessions = [];
   const files2 = sessionFiles(projectDirectory);
   if (!files2.length) return [];
@@ -24591,8 +24766,8 @@ function listClaudeSessions(projectId, limit = 30) {
   }
   const historySessions = cwd ? [...loadInteractiveHistory().get(cwd)?.sessions.values() ?? []].sort((a, b) => b.lastTimestamp - a.lastTimestamp) : [];
   for (const history of historySessions) {
-    const path = (0, import_node_path2.join)(projectDirectory, `${history.id}.jsonl`);
-    if (!(0, import_node_fs2.existsSync)(path)) continue;
+    const path = (0, import_node_path3.join)(projectDirectory, `${history.id}.jsonl`);
+    if (!(0, import_node_fs3.existsSync)(path)) continue;
     try {
       const inspected = inspectTranscript(path).session;
       if (inspected.isSidechain) continue;
@@ -24628,24 +24803,24 @@ function listClaudeSessions(projectId, limit = 30) {
 }
 
 // src/server/runtimes/transports/process.ts
-var import_node_child_process = require("node:child_process");
-var import_node_fs3 = require("node:fs");
-var import_node_path3 = require("node:path");
-var import_node_os3 = require("node:os");
+var import_node_child_process2 = require("node:child_process");
+var import_node_fs4 = require("node:fs");
+var import_node_path4 = require("node:path");
+var import_node_os4 = require("node:os");
 var knownPaths = {
-  grok: [(0, import_node_path3.join)((0, import_node_os3.homedir)(), ".grok", "bin", "grok")],
-  "kimi-code": [(0, import_node_path3.join)((0, import_node_os3.homedir)(), ".kimi-code", "bin", "kimi")]
+  grok: [(0, import_node_path4.join)((0, import_node_os4.homedir)(), ".grok", "bin", "grok")],
+  "kimi-code": [(0, import_node_path4.join)((0, import_node_os4.homedir)(), ".kimi-code", "bin", "kimi")]
 };
 function findExecutable(runtime, command) {
   const candidates = [
-    ...(process.env.PATH ?? "").split(import_node_path3.delimiter).filter(Boolean).map((directory) => (0, import_node_path3.join)(directory, command)),
+    ...(process.env.PATH ?? "").split(import_node_path4.delimiter).filter(Boolean).map((directory) => (0, import_node_path4.join)(directory, command)),
     ...knownPaths[runtime] ?? []
   ];
-  return candidates.find((path) => (0, import_node_fs3.existsSync)(path)) ?? null;
+  return candidates.find((path) => (0, import_node_fs4.existsSync)(path)) ?? null;
 }
 function firstLine(command, args, timeout = 5e3) {
   try {
-    return (0, import_node_child_process.execFileSync)(command, args, { encoding: "utf8", timeout, stdio: ["ignore", "pipe", "pipe"] }).trim().split("\n")[0] || null;
+    return (0, import_node_child_process2.execFileSync)(command, args, { encoding: "utf8", timeout, stdio: ["ignore", "pipe", "pipe"] }).trim().split("\n")[0] || null;
   } catch {
     return null;
   }
@@ -24674,7 +24849,7 @@ function basicProbe(input) {
   return { runtime: input.runtime, status: "ready", installed: true, authenticated: true, supported: true, version, executable, message: "Ready", action: null };
 }
 function spawnRuntime(command, args, cwd) {
-  return (0, import_node_child_process.spawn)(command, args, { cwd, env: process.env, stdio: ["pipe", "pipe", "pipe"] });
+  return (0, import_node_child_process2.spawn)(command, args, { cwd, env: process.env, stdio: ["pipe", "pipe", "pipe"] });
 }
 function terminate(child) {
   if (child.exitCode !== null || child.killed) return;
@@ -24766,7 +24941,7 @@ var descriptor = {
 function authenticated(executable) {
   if (!executable) return false;
   try {
-    (0, import_node_child_process2.execFileSync)(executable, ["auth", "status", "--json"], { stdio: "ignore", timeout: 5e3 });
+    (0, import_node_child_process3.execFileSync)(executable, ["auth", "status", "--json"], { stdio: "ignore", timeout: 5e3 });
     return true;
   } catch {
     return false;
@@ -24838,17 +25013,17 @@ var claudeAdapter = {
 };
 
 // src/server/runtimes/adapters/codex.ts
-var import_node_child_process3 = require("node:child_process");
+var import_node_child_process4 = require("node:child_process");
 
 // src/server/codexContexts.ts
-var import_node_fs4 = require("node:fs");
-var import_node_os4 = require("node:os");
-var import_node_path4 = require("node:path");
-var sessionsRoot = (0, import_node_path4.join)(process.env.CODEX_HOME ?? (0, import_node_path4.join)((0, import_node_os4.homedir)(), ".codex"), "sessions");
+var import_node_fs5 = require("node:fs");
+var import_node_os5 = require("node:os");
+var import_node_path5 = require("node:path");
+var sessionsRoot = (0, import_node_path5.join)(process.env.CODEX_HOME ?? (0, import_node_path5.join)((0, import_node_os5.homedir)(), ".codex"), "sessions");
 function files(path) {
-  if (!(0, import_node_fs4.existsSync)(path)) return [];
-  const entries = (0, import_node_fs4.readdirSync)(path, { withFileTypes: true });
-  return entries.flatMap((entry) => entry.isDirectory() ? files((0, import_node_path4.join)(path, entry.name)) : entry.name.endsWith(".jsonl") ? [(0, import_node_path4.join)(path, entry.name)] : []);
+  if (!(0, import_node_fs5.existsSync)(path)) return [];
+  const entries = (0, import_node_fs5.readdirSync)(path, { withFileTypes: true });
+  return entries.flatMap((entry) => entry.isDirectory() ? files((0, import_node_path5.join)(path, entry.name)) : entry.name.endsWith(".jsonl") ? [(0, import_node_path5.join)(path, entry.name)] : []);
 }
 function inspect(path) {
   try {
@@ -24856,21 +25031,21 @@ function inspect(path) {
     const record = JSON.parse(descriptor5);
     const payload = record.type === "session_meta" ? record.payload : null;
     if (!payload?.id || !payload?.cwd) return null;
-    return { id: payload.id, cwd: payload.cwd, updatedAt: (0, import_node_fs4.statSync)(path).mtime.toISOString(), path, source: payload.originator ?? payload.thread_source ?? null, title: (0, import_node_path4.basename)(payload.cwd) };
+    return { id: payload.id, cwd: payload.cwd, updatedAt: (0, import_node_fs5.statSync)(path).mtime.toISOString(), path, source: payload.originator ?? payload.thread_source ?? null, title: (0, import_node_path5.basename)(payload.cwd) };
   } catch {
     return null;
   }
 }
 function BunLikeFirstLine(path) {
-  const descriptor5 = (0, import_node_fs4.openSync)(path, "r");
+  const descriptor5 = (0, import_node_fs5.openSync)(path, "r");
   try {
     const buffer = Buffer.alloc(64 * 1024);
-    const length = (0, import_node_fs4.readSync)(descriptor5, buffer, 0, buffer.length, 0);
+    const length = (0, import_node_fs5.readSync)(descriptor5, buffer, 0, buffer.length, 0);
     const content = buffer.toString("utf8", 0, length);
     const newline = content.indexOf("\n");
     return newline < 0 ? content : content.slice(0, newline);
   } finally {
-    (0, import_node_fs4.closeSync)(descriptor5);
+    (0, import_node_fs5.closeSync)(descriptor5);
   }
 }
 function records() {
@@ -24880,7 +25055,57 @@ function listCodexProjects(query = "") {
   const grouped = /* @__PURE__ */ new Map();
   for (const record of records()) grouped.set(record.cwd, [...grouped.get(record.cwd) ?? [], record]);
   const needle = query.trim().toLowerCase();
-  return [...grouped.entries()].map(([cwd, sessions]) => ({ id: Buffer.from(cwd).toString("base64url"), runtime: "codex", name: (0, import_node_path4.basename)(cwd), cwd, parentPath: (0, import_node_path4.dirname)(cwd), updatedAt: sessions[0].updatedAt, sessionCount: sessions.length, hasMemory: (0, import_node_fs4.existsSync)((0, import_node_path4.join)(cwd, "AGENTS.md")), exists: (0, import_node_fs4.existsSync)(cwd) })).filter((project) => !needle || `${project.name} ${project.cwd}`.toLowerCase().includes(needle)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  return [...grouped.entries()].map(([cwd, sessions]) => ({ id: Buffer.from(cwd).toString("base64url"), runtime: "codex", name: (0, import_node_path5.basename)(cwd), cwd, parentPath: (0, import_node_path5.dirname)(cwd), updatedAt: sessions[0].updatedAt, sessionCount: sessions.length, hasMemory: (0, import_node_fs5.existsSync)((0, import_node_path5.join)(cwd, "AGENTS.md")), exists: (0, import_node_fs5.existsSync)(cwd) })).filter((project) => !needle || `${project.name} ${project.cwd}`.toLowerCase().includes(needle)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+function findFile(directory, suffix) {
+  let entries = [];
+  try {
+    entries = (0, import_node_fs5.readdirSync)(directory, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+  for (const entry of entries.sort((a, b) => b.name.localeCompare(a.name))) {
+    const path = (0, import_node_path5.join)(directory, entry.name);
+    if (entry.isFile() && entry.name.endsWith(suffix)) return path;
+    if (entry.isDirectory()) {
+      const found = findFile(path, suffix);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+function firstPrompt(path) {
+  const descriptor5 = (0, import_node_fs5.openSync)(path, "r");
+  try {
+    const buffer = Buffer.alloc(512 * 1024);
+    const text = buffer.toString("utf8", 0, (0, import_node_fs5.readSync)(descriptor5, buffer, 0, buffer.length, 0));
+    for (const line of text.split("\n")) {
+      if (!line.includes('"role":"user"')) continue;
+      try {
+        const payload = JSON.parse(line).payload;
+        for (const part of payload?.content ?? []) {
+          const said = typeof part?.text === "string" ? part.text.replace(/\s+/g, " ").trim() : "";
+          if (said && !said.startsWith("<") && !said.startsWith("# AGENTS.md")) return said.length > 82 ? `${said.slice(0, 79)}\u2026` : said;
+        }
+      } catch {
+      }
+    }
+  } finally {
+    (0, import_node_fs5.closeSync)(descriptor5);
+  }
+  return null;
+}
+function findCodexSession(sessionId) {
+  if (!/^[\w-]+$/.test(sessionId)) return null;
+  const path = findFile(sessionsRoot, `${sessionId}.jsonl`);
+  const record = path ? inspect(path) : null;
+  if (!path || !record) return null;
+  let createdAt = null;
+  try {
+    createdAt = JSON.parse(BunLikeFirstLine(path)).payload?.timestamp ?? null;
+  } catch {
+  }
+  return { id: record.id, title: firstPrompt(path) ?? `Codex session in ${record.title}`, preview: "", lastPrompt: "", branch: null, createdAt, updatedAt: record.updatedAt, size: (0, import_node_fs5.statSync)(path).size, isSidechain: false, source: record.source };
 }
 function listCodexSessions(projectId, limit = 40) {
   let cwd = "";
@@ -24889,7 +25114,7 @@ function listCodexSessions(projectId, limit = 40) {
   } catch {
     return [];
   }
-  return records().filter((record) => record.cwd === cwd).slice(0, limit).map((record) => ({ id: record.id, title: record.title, preview: `Codex task in ${record.cwd}`, lastPrompt: "", branch: null, createdAt: null, updatedAt: record.updatedAt, size: (0, import_node_fs4.statSync)(record.path).size, isSidechain: false, source: record.source }));
+  return records().filter((record) => record.cwd === cwd).slice(0, limit).map((record) => ({ id: record.id, title: record.title, preview: `Codex task in ${record.cwd}`, lastPrompt: "", branch: null, createdAt: null, updatedAt: record.updatedAt, size: (0, import_node_fs5.statSync)(record.path).size, isSidechain: false, source: record.source }));
 }
 
 // src/server/runtimes/adapters/codex.ts
@@ -24912,7 +25137,7 @@ var descriptor2 = {
 function authenticated2(executable) {
   if (!executable) return false;
   try {
-    (0, import_node_child_process3.execFileSync)(executable, ["login", "status"], { stdio: "ignore", timeout: 5e3 });
+    (0, import_node_child_process4.execFileSync)(executable, ["login", "status"], { stdio: "ignore", timeout: 5e3 });
     return true;
   } catch {
     return false;
@@ -24973,16 +25198,16 @@ var codexAdapter = {
 
 // src/server/runtimes/adapters/grok.ts
 var import_node_crypto2 = require("node:crypto");
+var import_node_fs7 = require("node:fs");
+var import_node_os7 = require("node:os");
+var import_node_path7 = require("node:path");
+var import_node_child_process5 = require("node:child_process");
+
+// src/server/grokContexts.ts
 var import_node_fs6 = require("node:fs");
 var import_node_os6 = require("node:os");
 var import_node_path6 = require("node:path");
-var import_node_child_process4 = require("node:child_process");
-
-// src/server/grokContexts.ts
-var import_node_fs5 = require("node:fs");
-var import_node_os5 = require("node:os");
-var import_node_path5 = require("node:path");
-var root = (0, import_node_path5.join)(process.env.GROK_HOME ?? (0, import_node_path5.join)((0, import_node_os5.homedir)(), ".grok"), "sessions");
+var root = (0, import_node_path6.join)(process.env.GROK_HOME ?? (0, import_node_path6.join)((0, import_node_os6.homedir)(), ".grok"), "sessions");
 var ttl = 3e4;
 var cache = null;
 function decodeCwd(value) {
@@ -24995,22 +25220,22 @@ function decodeCwd(value) {
 function records2() {
   if (cache && cache.expiresAt > Date.now()) return cache.records;
   const next = [];
-  if ((0, import_node_fs5.existsSync)(root)) {
-    for (const projectName of (0, import_node_fs5.readdirSync)(root)) {
+  if ((0, import_node_fs6.existsSync)(root)) {
+    for (const projectName of (0, import_node_fs6.readdirSync)(root)) {
       if (!projectName.startsWith("%")) continue;
-      const projectDirectory = (0, import_node_path5.join)(root, projectName);
+      const projectDirectory = (0, import_node_path6.join)(root, projectName);
       let sessionNames = [];
       try {
-        sessionNames = (0, import_node_fs5.readdirSync)(projectDirectory);
+        sessionNames = (0, import_node_fs6.readdirSync)(projectDirectory);
       } catch {
         continue;
       }
       for (const id of sessionNames) {
-        const path = (0, import_node_path5.join)(projectDirectory, id, "summary.json");
+        const path = (0, import_node_path6.join)(projectDirectory, id, "summary.json");
         try {
-          const stats = (0, import_node_fs5.statSync)(path);
+          const stats = (0, import_node_fs6.statSync)(path);
           if (!stats.isFile() || stats.size > 512e3) continue;
-          const summary = JSON.parse((0, import_node_fs5.readFileSync)(path, "utf8"));
+          const summary = JSON.parse((0, import_node_fs6.readFileSync)(path, "utf8"));
           next.push({ id, cwd: decodeCwd(projectName), path, size: stats.size, summary, updatedAt: summary.last_active_at ?? summary.updated_at ?? stats.mtime.toISOString() });
         } catch {
         }
@@ -25028,23 +25253,17 @@ function listGrokProjects(query = "") {
   return [...grouped.entries()].map(([cwd, sessions]) => ({
     id: Buffer.from(cwd).toString("base64url"),
     runtime: "grok",
-    name: (0, import_node_path5.basename)(cwd) || cwd,
+    name: (0, import_node_path6.basename)(cwd) || cwd,
     cwd,
-    parentPath: (0, import_node_path5.dirname)(cwd),
+    parentPath: (0, import_node_path6.dirname)(cwd),
     updatedAt: sessions[0].updatedAt,
     sessionCount: sessions.length,
-    hasMemory: (0, import_node_fs5.existsSync)((0, import_node_path5.join)(cwd, "AGENTS.md")),
-    exists: (0, import_node_fs5.existsSync)(cwd)
+    hasMemory: (0, import_node_fs6.existsSync)((0, import_node_path6.join)(cwd, "AGENTS.md")),
+    exists: (0, import_node_fs6.existsSync)(cwd)
   })).filter((project) => !needle || `${project.name} ${project.cwd}`.toLowerCase().includes(needle)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
-function listGrokSessions(projectId, limit = 32) {
-  let cwd = "";
-  try {
-    cwd = Buffer.from(projectId, "base64url").toString("utf8");
-  } catch {
-    return [];
-  }
-  return records2().filter((record) => record.cwd === cwd).slice(0, limit).map((record) => ({
+function toSession(record) {
+  return {
     id: record.id,
     title: record.summary.generated_title?.trim() || record.summary.session_summary?.trim().slice(0, 82) || "Untitled Grok session",
     preview: record.summary.session_summary?.trim().slice(0, 180) || "",
@@ -25055,7 +25274,20 @@ function listGrokSessions(projectId, limit = 32) {
     size: record.size,
     isSidechain: false,
     source: record.summary.current_model_id ?? "Grok Build"
-  }));
+  };
+}
+function listGrokSessions(projectId, limit = 32) {
+  let cwd = "";
+  try {
+    cwd = Buffer.from(projectId, "base64url").toString("utf8");
+  } catch {
+    return [];
+  }
+  return records2().filter((record) => record.cwd === cwd).slice(0, limit).map(toSession);
+}
+function findGrokSession(sessionId) {
+  const record = records2().find((candidate) => candidate.id === sessionId);
+  return record ? toSession(record) : null;
 }
 function findGrokSessionCwd(sessionId) {
   return records2().find((record) => record.id === sessionId)?.cwd ?? null;
@@ -25079,7 +25311,7 @@ var descriptor3 = {
 };
 function discoveredModels(executable) {
   try {
-    const output = (0, import_node_child_process4.execFileSync)(executable, ["models"], { encoding: "utf8", timeout: 15e3, stdio: ["ignore", "pipe", "ignore"] });
+    const output = (0, import_node_child_process5.execFileSync)(executable, ["models"], { encoding: "utf8", timeout: 15e3, stdio: ["ignore", "pipe", "ignore"] });
     const found = output.split("\n").map((line) => line.match(/(?:^\s*[*›>\-]\s*|Default model:\s*)([a-z0-9][a-z0-9._/-]+)/i)?.[1]).filter((id) => Boolean(id));
     return [...new Set(found)].map((id) => ({ id, label: id, name: id, detail: "Discovered from Grok Build" }));
   } catch {
@@ -25112,8 +25344,8 @@ var grokAdapter = {
   async probe() {
     const executable = findExecutable("grok", "grok");
     const authReady = () => {
-      if (!executable || !(0, import_node_fs6.existsSync)((0, import_node_path6.join)((0, import_node_os6.homedir)(), ".grok", "auth.json"))) return false;
-      const result = (0, import_node_child_process4.spawnSync)(executable, ["models"], { encoding: "utf8", timeout: 15e3 });
+      if (!executable || !(0, import_node_fs7.existsSync)((0, import_node_path7.join)((0, import_node_os7.homedir)(), ".grok", "auth.json"))) return false;
+      const result = (0, import_node_child_process5.spawnSync)(executable, ["models"], { encoding: "utf8", timeout: 15e3 });
       return result.status === 0 && !/not authenticated|token expired|re-authentication required/i.test(`${result.stdout}
 ${result.stderr}`);
     };
@@ -25173,36 +25405,36 @@ ${result.stderr}`);
 };
 
 // src/server/runtimes/adapters/kimi.ts
-var import_node_fs10 = require("node:fs");
-var import_node_os9 = require("node:os");
-var import_node_path10 = require("node:path");
+var import_node_fs11 = require("node:fs");
+var import_node_os10 = require("node:os");
+var import_node_path11 = require("node:path");
 
 // src/server/kimiContexts.ts
-var import_node_fs7 = require("node:fs");
-var import_node_os7 = require("node:os");
-var import_node_path7 = require("node:path");
-var root2 = (0, import_node_path7.join)(process.env.KIMI_CODE_HOME ?? (0, import_node_path7.join)((0, import_node_os7.homedir)(), ".kimi-code"), "sessions");
+var import_node_fs8 = require("node:fs");
+var import_node_os8 = require("node:os");
+var import_node_path8 = require("node:path");
+var root2 = (0, import_node_path8.join)(process.env.KIMI_CODE_HOME ?? (0, import_node_path8.join)((0, import_node_os8.homedir)(), ".kimi-code"), "sessions");
 var ttl2 = 3e4;
 var cache2 = null;
 function records3() {
   if (cache2 && cache2.expiresAt > Date.now()) return cache2.records;
   const next = [];
-  if ((0, import_node_fs7.existsSync)(root2)) {
-    for (const projectName of (0, import_node_fs7.readdirSync)(root2)) {
-      const projectDirectory = (0, import_node_path7.join)(root2, projectName);
+  if ((0, import_node_fs8.existsSync)(root2)) {
+    for (const projectName of (0, import_node_fs8.readdirSync)(root2)) {
+      const projectDirectory = (0, import_node_path8.join)(root2, projectName);
       let sessionNames = [];
       try {
-        sessionNames = (0, import_node_fs7.readdirSync)(projectDirectory);
+        sessionNames = (0, import_node_fs8.readdirSync)(projectDirectory);
       } catch {
         continue;
       }
       for (const sessionName of sessionNames) {
         if (!sessionName.startsWith("session_")) continue;
-        const path = (0, import_node_path7.join)(projectDirectory, sessionName, "state.json");
+        const path = (0, import_node_path8.join)(projectDirectory, sessionName, "state.json");
         try {
-          const stats = (0, import_node_fs7.statSync)(path);
+          const stats = (0, import_node_fs8.statSync)(path);
           if (!stats.isFile() || stats.size > 512e3) continue;
-          const state = JSON.parse((0, import_node_fs7.readFileSync)(path, "utf8"));
+          const state = JSON.parse((0, import_node_fs8.readFileSync)(path, "utf8"));
           if (!state.workDir) continue;
           next.push({ id: sessionName, cwd: state.workDir, path, size: stats.size, state, updatedAt: state.updatedAt ?? stats.mtime.toISOString() });
         } catch {
@@ -25221,23 +25453,17 @@ function listKimiProjects(query = "") {
   return [...grouped.entries()].map(([cwd, sessions]) => ({
     id: Buffer.from(cwd).toString("base64url"),
     runtime: "kimi-code",
-    name: (0, import_node_path7.basename)(cwd) || cwd,
+    name: (0, import_node_path8.basename)(cwd) || cwd,
     cwd,
-    parentPath: (0, import_node_path7.dirname)(cwd),
+    parentPath: (0, import_node_path8.dirname)(cwd),
     updatedAt: sessions[0].updatedAt,
     sessionCount: sessions.length,
-    hasMemory: (0, import_node_fs7.existsSync)((0, import_node_path7.join)(cwd, "AGENTS.md")),
-    exists: (0, import_node_fs7.existsSync)(cwd)
+    hasMemory: (0, import_node_fs8.existsSync)((0, import_node_path8.join)(cwd, "AGENTS.md")),
+    exists: (0, import_node_fs8.existsSync)(cwd)
   })).filter((project) => !needle || `${project.name} ${project.cwd}`.toLowerCase().includes(needle)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
-function listKimiSessions(projectId, limit = 32) {
-  let cwd = "";
-  try {
-    cwd = Buffer.from(projectId, "base64url").toString("utf8");
-  } catch {
-    return [];
-  }
-  return records3().filter((record) => record.cwd === cwd).slice(0, limit).map((record) => ({
+function toSession2(record) {
+  return {
     id: record.id,
     title: record.state.title?.trim().slice(0, 82) || record.state.lastPrompt?.trim().slice(0, 82) || "Untitled Kimi session",
     preview: record.state.lastPrompt?.trim().slice(0, 180) || "",
@@ -25248,16 +25474,29 @@ function listKimiSessions(projectId, limit = 32) {
     size: record.size,
     isSidechain: false,
     source: "Kimi Code"
-  }));
+  };
+}
+function listKimiSessions(projectId, limit = 32) {
+  let cwd = "";
+  try {
+    cwd = Buffer.from(projectId, "base64url").toString("utf8");
+  } catch {
+    return [];
+  }
+  return records3().filter((record) => record.cwd === cwd).slice(0, limit).map(toSession2);
+}
+function findKimiSession(sessionId) {
+  const record = records3().find((candidate) => candidate.id === sessionId);
+  return record ? toSession2(record) : null;
 }
 function findKimiSessionCwd(sessionId) {
   return records3().find((record) => record.id === sessionId)?.cwd ?? null;
 }
 
 // src/server/runtimes/transports/acpClient.ts
-var import_node_child_process5 = require("node:child_process");
-var import_node_fs8 = require("node:fs");
-var import_node_path8 = require("node:path");
+var import_node_child_process6 = require("node:child_process");
+var import_node_fs9 = require("node:fs");
+var import_node_path9 = require("node:path");
 var import_node_readline = require("node:readline");
 var AcpClient = class {
   child;
@@ -25267,8 +25506,8 @@ var AcpClient = class {
   root;
   stderr = "";
   constructor(command, args, cwd) {
-    this.root = (0, import_node_fs8.realpathSync)(cwd);
-    this.child = (0, import_node_child_process5.spawn)(command, args, { cwd, env: process.env, stdio: ["pipe", "pipe", "pipe"] });
+    this.root = (0, import_node_fs9.realpathSync)(cwd);
+    this.child = (0, import_node_child_process6.spawn)(command, args, { cwd, env: process.env, stdio: ["pipe", "pipe", "pipe"] });
     this.child.stderr.on("data", (chunk) => {
       this.stderr += chunk.toString();
     });
@@ -25336,7 +25575,7 @@ var AcpClient = class {
         return;
       }
       if (message.method === "fs/read_text_file") {
-        const text = (0, import_node_fs8.readFileSync)(this.insideProject(String(message.params?.path ?? "")), "utf8");
+        const text = (0, import_node_fs9.readFileSync)(this.insideProject(String(message.params?.path ?? "")), "utf8");
         const line = Math.max(1, Number(message.params?.line ?? 1));
         const limit = Math.max(1, Number(message.params?.limit ?? Number.MAX_SAFE_INTEGER));
         const content = text.split("\n").slice(line - 1, line - 1 + limit).join("\n");
@@ -25350,8 +25589,8 @@ var AcpClient = class {
   }
   // The broker reads files on the runtime's behalf, outside its sandbox, so it serves only the project folder.
   insideProject(requested) {
-    const target = (0, import_node_fs8.realpathSync)((0, import_node_path8.resolve)(this.root, requested));
-    if (target !== this.root && !target.startsWith(`${this.root}${import_node_path8.sep}`)) throw new Error("Polychat lets this runtime read files only inside its project folder.");
+    const target = (0, import_node_fs9.realpathSync)((0, import_node_path9.resolve)(this.root, requested));
+    if (target !== this.root && !target.startsWith(`${this.root}${import_node_path9.sep}`)) throw new Error("Polychat lets this runtime read files only inside its project folder.");
     return target;
   }
   write(message) {
@@ -25368,24 +25607,24 @@ var AcpClient = class {
 };
 
 // src/server/runtimes/transports/seatbelt.ts
-var import_node_fs9 = require("node:fs");
-var import_node_os8 = require("node:os");
-var import_node_path9 = require("node:path");
+var import_node_fs10 = require("node:fs");
+var import_node_os9 = require("node:os");
+var import_node_path10 = require("node:path");
 function seatbeltAvailable() {
-  return (0, import_node_fs9.existsSync)("/usr/bin/sandbox-exec");
+  return (0, import_node_fs10.existsSync)("/usr/bin/sandbox-exec");
 }
 function quote(value) {
   return value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 function real(path) {
   try {
-    return (0, import_node_fs9.realpathSync)(path);
+    return (0, import_node_fs10.realpathSync)(path);
   } catch {
     return path;
   }
 }
-function readOnlyProfile(home = (0, import_node_os8.homedir)()) {
-  const writable = [...new Set([(0, import_node_path9.join)(home, ".kimi-code"), (0, import_node_path9.join)(home, ".kimi"), "/private/tmp", "/private/var/folders", (0, import_node_os8.tmpdir)()].map(real))];
+function readOnlyProfile(home2 = (0, import_node_os9.homedir)()) {
+  const writable = [...new Set([(0, import_node_path10.join)(home2, ".kimi-code"), (0, import_node_path10.join)(home2, ".kimi"), "/private/tmp", "/private/var/folders", (0, import_node_os9.tmpdir)()].map(real))];
   return `(version 1)
 (allow default)
 (deny file-write*)
@@ -25412,14 +25651,14 @@ var descriptor4 = {
   presets: presets4
 };
 function hasAuth() {
-  const root3 = (0, import_node_path10.join)((0, import_node_os9.homedir)(), ".kimi-code");
-  return (0, import_node_fs10.existsSync)((0, import_node_path10.join)(root3, "credentials", "kimi-code.json")) || (0, import_node_fs10.existsSync)((0, import_node_path10.join)(root3, "oauth", "kimi-code.json"));
+  const root3 = (0, import_node_path11.join)((0, import_node_os10.homedir)(), ".kimi-code");
+  return (0, import_node_fs11.existsSync)((0, import_node_path11.join)(root3, "credentials", "kimi-code.json")) || (0, import_node_fs11.existsSync)((0, import_node_path11.join)(root3, "oauth", "kimi-code.json"));
 }
 function configuredModels() {
-  const path = (0, import_node_path10.join)((0, import_node_os9.homedir)(), ".kimi-code", "config.toml");
-  if (!(0, import_node_fs10.existsSync)(path)) return [];
+  const path = (0, import_node_path11.join)((0, import_node_os10.homedir)(), ".kimi-code", "config.toml");
+  if (!(0, import_node_fs11.existsSync)(path)) return [];
   try {
-    return [...(0, import_node_fs10.readFileSync)(path, "utf8").matchAll(/^\[models\."?([^\]"]+)"?\]/gm)].map((match) => match[1]);
+    return [...(0, import_node_fs11.readFileSync)(path, "utf8").matchAll(/^\[models\."?([^\]"]+)"?\]/gm)].map((match) => match[1]);
   } catch {
     return [];
   }
@@ -25678,10 +25917,10 @@ var turnLimitMs = Number(process.env.POLYCHAT_COUNCIL_TURN_MS ?? 5 * 6e4);
 var activePhases = /* @__PURE__ */ new Set(["blind", "ranking", "responding", "minutes"]);
 var letters = "ABCDEF";
 var speaker = "Polychat council";
-var runtimeNames = { human: "Human", codex: "Codex", "claude-code": "Claude Code", grok: "Grok Build", "kimi-code": "Kimi Code" };
-var who = (agent) => agent.name === runtimeNames[agent.runtime] ? agent.name : `${agent.name} (${runtimeNames[agent.runtime]})`;
+var runtimeNames2 = { human: "Human", codex: "Codex", "claude-code": "Claude Code", grok: "Grok Build", "kimi-code": "Kimi Code" };
+var who = (agent) => agent.name === runtimeNames2[agent.runtime] ? agent.name : `${agent.name} (${runtimeNames2[agent.runtime]})`;
 var nameOf = (agentId) => getAgent(agentId)?.name ?? "A member";
-var ordinal = (place) => ["first", "second", "third", "fourth", "fifth", "sixth"][place - 1] ?? `#${place}`;
+var ordinal = (place2) => ["first", "second", "third", "fourth", "fifth", "sixth"][place2 - 1] ?? `#${place2}`;
 var list = (names) => names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 function activeCouncil(roomId) {
   return listCouncils(roomId, 5).find((council) => activePhases.has(council.phase));
@@ -25803,7 +26042,7 @@ CROSS-EXAMINATION
 ${responses.map((item) => `### ${who(item.agent)}
 ${item.text}`).join("\n\n")}
 
-Write the minutes plainly, in Markdown, with exactly these sections:
+Write the minutes plainly, in Markdown. Begin with one line: "# " and a headline of at most eight words, in sentence case, that says what the council concluded, like "# Ship conflict copies before CRDTs". It also names the saved record, so make it specific. Then write exactly these sections:
 ## Decision
 1\u20133 sentences: what the council recommends, and how settled it is.
 ## Where each mind landed
@@ -25874,6 +26113,11 @@ async function runCouncil(id) {
   if (!stillRunning(id)) return;
   const written = minutes.get(chairId)?.status === "complete";
   setPhase(id, written ? "complete" : "failed", written ? {} : { error: `${nameOf(chairId)} couldn't write the minutes.` });
+  if (written) try {
+    publishCouncil(saveCouncilRecord(id, "records"));
+  } catch (error) {
+    console.error("Polychat couldn't save the council record:", error);
+  }
 }
 function startCouncil(roomId, input) {
   const question = input.question.trim();
@@ -25902,6 +26146,109 @@ function cancelCouncil(roomId, councilId) {
   const cancelled = setPhase(council.id, "cancelled");
   cancelAgents(council.agentIds);
   return cancelled;
+}
+
+// src/server/brings.ts
+var import_node_fs12 = require("node:fs");
+var import_node_os11 = require("node:os");
+var import_node_path12 = require("node:path");
+var home = (0, import_node_os11.homedir)();
+var place = (folder) => folder === home ? "~" : (0, import_node_path12.basename)(folder) || folder;
+function isFolder(path) {
+  try {
+    return (0, import_node_fs12.statSync)(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+function present(folder, names) {
+  let entries = [];
+  try {
+    entries = (0, import_node_fs12.readdirSync)(folder);
+  } catch {
+    return [];
+  }
+  const wanted = new Set(names.map((name) => name.toLowerCase()));
+  return entries.filter((entry) => wanted.has(entry.toLowerCase())).sort();
+}
+function gitRoot(folder) {
+  for (let current = folder; ; current = (0, import_node_path12.dirname)(current)) {
+    if ((0, import_node_fs12.existsSync)((0, import_node_path12.join)(current, ".git"))) return current;
+    if ((0, import_node_path12.dirname)(current) === current) return null;
+  }
+}
+function descent(top, folder) {
+  const folders = [];
+  for (let current = folder; ; current = (0, import_node_path12.dirname)(current)) {
+    folders.unshift(current);
+    if (current === top || (0, import_node_path12.dirname)(current) === current) return folders;
+  }
+}
+function markdownFiles(folder, recursive) {
+  let count = 0;
+  try {
+    for (const entry of (0, import_node_fs12.readdirSync)(folder, { withFileTypes: true })) {
+      if (entry.isFile() && entry.name.endsWith(".md") && entry.name !== "MEMORY.md") count += 1;
+      else if (recursive && entry.isDirectory()) count += markdownFiles((0, import_node_path12.join)(folder, entry.name), true);
+    }
+  } catch {
+  }
+  return count;
+}
+function notesFor(agent) {
+  const notes = [];
+  const note = (folder, file, label = `${file} in ${place(folder)}`) => notes.push({ label, path: (0, import_node_path12.join)(folder, file) });
+  const cwd = agent.cwd && isFolder(agent.cwd) ? agent.cwd : null;
+  if (agent.runtime === "claude-code") {
+    const user = (0, import_node_path12.join)(home, ".claude");
+    for (const file of present(user, ["CLAUDE.md"])) note(user, file, `Your global ${file}`);
+    const rules = markdownFiles((0, import_node_path12.join)(user, "rules"), true);
+    if (rules) notes.push({ label: `${rules} rule file${rules === 1 ? "" : "s"} in ~/.claude/rules`, path: (0, import_node_path12.join)(user, "rules") });
+    if (cwd) for (const folder of descent("/", cwd).filter((folder2) => folder2 !== "/")) {
+      for (const file of present(folder, ["CLAUDE.md", "CLAUDE.local.md"])) note(folder, file);
+      if (folder === home) continue;
+      for (const file of present((0, import_node_path12.join)(folder, ".claude"), ["CLAUDE.md"])) note(folder, `.claude/${file}`);
+      const projectRules = markdownFiles((0, import_node_path12.join)(folder, ".claude", "rules"), true);
+      if (projectRules) notes.push({ label: `${projectRules} rule file${projectRules === 1 ? "" : "s"} in ${place(folder)}`, path: (0, import_node_path12.join)(folder, ".claude", "rules") });
+    }
+    return notes;
+  }
+  if (agent.runtime === "human") return notes;
+  const globalFolder = agent.runtime === "codex" ? process.env.CODEX_HOME ?? (0, import_node_path12.join)(home, ".codex") : agent.runtime === "grok" ? process.env.GROK_HOME ?? (0, import_node_path12.join)(home, ".grok") : process.env.KIMI_CODE_HOME ?? (0, import_node_path12.join)(home, ".kimi-code");
+  const names = agent.runtime === "grok" ? ["Agents.md", "Claude.md", "AGENT.md", "AGENTS.md"] : agent.runtime === "codex" ? ["AGENTS.override.md", "AGENTS.md"] : ["AGENTS.md"];
+  const read = (folder) => {
+    const found = present(folder, names);
+    const override = found.find((file) => file.toLowerCase() === "agents.override.md");
+    return agent.runtime === "codex" && override ? [override] : found;
+  };
+  for (const file of read(globalFolder)) note(globalFolder, file, `Your global ${file}`);
+  if (cwd) for (const folder of descent(gitRoot(cwd) ?? cwd, cwd)) for (const file of read(folder)) note(folder, file);
+  return notes;
+}
+function memoryFor(agent) {
+  if (agent.runtime !== "claude-code" || !agent.cwd) return null;
+  for (const folder of /* @__PURE__ */ new Set([agent.cwd, gitRoot(agent.cwd) ?? agent.cwd])) {
+    const memory = (0, import_node_path12.join)(claudeProjectDir(folder), "memory");
+    const count = markdownFiles(memory, false);
+    if (count) return { count, path: memory };
+  }
+  return null;
+}
+function conversationFor(agent) {
+  if (!agent.sessionId || agent.runtime === "human") return null;
+  const session = agent.runtime === "claude-code" ? findClaudeSession(agent.sessionId, agent.cwd) : agent.runtime === "codex" ? findCodexSession(agent.sessionId) : agent.runtime === "grok" ? findGrokSession(agent.sessionId) : findKimiSession(agent.sessionId);
+  const startedAt = session?.createdAt ?? null;
+  const origin = startedAt && Date.parse(startedAt) >= Date.parse(agent.createdAt) - 6e4 ? "room" : "earlier";
+  return { found: Boolean(session), title: session?.title ?? null, startedAt, lastActiveAt: session?.updatedAt ?? null, origin };
+}
+function describeMind(agent) {
+  return {
+    agentId: agent.id,
+    project: agent.cwd ? { name: place(agent.cwd), path: agent.cwd, exists: isFolder(agent.cwd) } : null,
+    notes: notesFor(agent),
+    memory: memoryFor(agent),
+    conversation: conversationFor(agent)
+  };
 }
 
 // src/server/index.ts
@@ -26012,7 +26359,7 @@ function sendMessage(roomId, body) {
   }
   return { ...message, dispatchedAgentIds, dispatchErrors, queuedForMeeting: meetingInput && !stopRequested, stopRequested };
 }
-app.get("/api/health", (_request, response) => response.json({ ok: true, service: "polychat", version: "1.1.0", dataDir, registry: { ready: true, runtimes: runtimeIds } }));
+app.get("/api/health", (_request, response) => response.json({ ok: true, service: "polychat", version: "1.2.0", dataDir, registry: { ready: true, runtimes: runtimeIds } }));
 app.get("/api/runtimes", async (request, response) => {
   try {
     response.json({ runtimes: await runtimeCatalog(request.query.refresh === "true") });
@@ -26074,6 +26421,26 @@ app.delete("/api/rooms/:roomId/councils/:councilId", (request, response) => {
   const council = cancelCouncil(request.params.roomId, request.params.councilId);
   council ? response.json(council) : response.status(404).json({ error: "No council in session with that id." });
 });
+var recordTarget = (value) => value === "project" ? "project" : "records";
+app.post("/api/rooms/:roomId/councils/:councilId/records", (request, response) => {
+  const council = getCouncil(request.params.councilId);
+  if (!council || council.roomId !== request.params.roomId) return response.status(404).json({ error: "No council with that id in this room." });
+  try {
+    response.status(201).json(publishCouncil(saveCouncilRecord(council.id, recordTarget(request.body?.target))));
+  } catch (error) {
+    response.status(409).json({ error: error instanceof Error ? error.message : String(error) });
+  }
+});
+app.post("/api/rooms/:roomId/councils/:councilId/reveal", (request, response) => {
+  const council = getCouncil(request.params.councilId);
+  if (!council || council.roomId !== request.params.roomId) return response.status(404).json({ error: "No council with that id in this room." });
+  try {
+    revealCouncilRecord(council, recordTarget(request.body?.target));
+    response.status(204).end();
+  } catch (error) {
+    response.status(404).json({ error: error instanceof Error ? error.message : String(error) });
+  }
+});
 app.post("/api/rooms/:roomId/participants", (request, response) => {
   try {
     const runtime = request.body?.runtime;
@@ -26082,10 +26449,10 @@ app.post("/api/rooms/:roomId/participants", (request, response) => {
     const name = String(request.body?.name ?? "").trim();
     if (!name || name.length > 48) return response.status(400).json({ error: "Choose a name under 48 characters." });
     const cwd = request.body?.cwd === null ? null : String(request.body?.cwd ?? process.cwd()).trim();
-    if (cwd && (!(0, import_node_fs11.existsSync)(cwd) || !(0, import_node_fs11.statSync)(cwd).isDirectory())) return response.status(400).json({ error: "The working folder does not exist." });
+    if (cwd && (!(0, import_node_fs13.existsSync)(cwd) || !(0, import_node_fs13.statSync)(cwd).isDirectory())) return response.status(400).json({ error: "The working folder does not exist." });
     const sessionId = typeof request.body?.sessionId === "string" ? request.body.sessionId : null;
     const sessionCwd = sessionId && runtime === "grok" ? findGrokSessionCwd(sessionId) : sessionId && runtime === "kimi-code" ? findKimiSessionCwd(sessionId) : null;
-    if (cwd && sessionCwd && (0, import_node_path11.resolve)(cwd) !== (0, import_node_path11.resolve)(sessionCwd)) return response.status(409).json({ error: "The selected session belongs to a different project directory.", code: "session_mismatch", runtime });
+    if (cwd && sessionCwd && (0, import_node_path13.resolve)(cwd) !== (0, import_node_path13.resolve)(sessionCwd)) return response.status(409).json({ error: "The selected session belongs to a different project directory.", code: "session_mismatch", runtime });
     const fallbackModel = runtime === "claude-code" ? "opus" : "current";
     const agent = createAgent({ roomId: request.params.roomId, runtime, name, model: runtime === "human" ? null : String(request.body?.model || fallbackModel), cwd, sessionId, status: request.body?.status === "away" ? "away" : "available" });
     publish(request.params.roomId, { type: "agent.updated", agent });
@@ -26101,13 +26468,22 @@ app.patch("/api/rooms/:roomId/participants/:agentId", (request, response) => {
     const cwd = typeof request.body?.cwd === "string" ? request.body.cwd : current.cwd;
     const sessionId = request.body?.sessionId === null || typeof request.body?.sessionId === "string" ? request.body.sessionId : current.sessionId;
     const sessionCwd = sessionId && current.runtime === "grok" ? findGrokSessionCwd(sessionId) : sessionId && current.runtime === "kimi-code" ? findKimiSessionCwd(sessionId) : null;
-    if (cwd && sessionCwd && (0, import_node_path11.resolve)(cwd) !== (0, import_node_path11.resolve)(sessionCwd)) return response.status(409).json({ error: "The selected session belongs to a different project directory.", code: "session_mismatch", runtime: current.runtime });
+    if (cwd && sessionCwd && (0, import_node_path13.resolve)(cwd) !== (0, import_node_path13.resolve)(sessionCwd)) return response.status(409).json({ error: "The selected session belongs to a different project directory.", code: "session_mismatch", runtime: current.runtime });
     const patch = { ...typeof request.body?.name === "string" ? { name: request.body.name } : {}, ...typeof request.body?.model === "string" ? { model: request.body.model } : {}, ...typeof request.body?.cwd === "string" ? { cwd: request.body.cwd } : {}, ...request.body?.sessionId === null || typeof request.body?.sessionId === "string" ? { sessionId: request.body.sessionId } : {}, ...typeof request.body?.status === "string" ? { status: request.body.status } : {} };
     const agent = updateAgent(request.params.agentId, patch);
     publish(request.params.roomId, { type: "agent.updated", agent });
     response.json(agent);
   } catch (error) {
     response.status(400).json({ error: error instanceof Error ? error.message : String(error) });
+  }
+});
+app.get("/api/rooms/:roomId/participants/:agentId/brings", (request, response) => {
+  const agent = senderInRoom(request.params.roomId, request.params.agentId);
+  if (!agent) return response.status(404).json({ error: "Participant not found." });
+  try {
+    response.json(describeMind(agent));
+  } catch (error) {
+    response.status(500).json({ error: error instanceof Error ? error.message : String(error) });
   }
 });
 app.delete("/api/rooms/:roomId/participants/:agentId", (request, response) => {
@@ -26197,16 +26573,16 @@ app.post("/api/messages", (request, response) => {
 });
 app.get("/api/claude/projects", (request, response) => response.json({ projects: listClaudeProjects(typeof request.query.q === "string" ? request.query.q : "") }));
 app.get("/api/claude/projects/:id/sessions", (request, response) => response.json({ sessions: listClaudeSessions(request.params.id, Number(request.query.limit ?? 32)) }));
-var entryDir = (0, import_node_path11.dirname)((0, import_node_path11.resolve)(process.argv[1] ?? process.cwd()));
-var dist = (0, import_node_path11.basename)(entryDir) === "dist" ? entryDir : (0, import_node_path11.join)(entryDir, "../../dist");
-if ((0, import_node_fs11.existsSync)(dist)) {
+var entryDir = (0, import_node_path13.dirname)((0, import_node_path13.resolve)(process.argv[1] ?? process.cwd()));
+var dist = (0, import_node_path13.basename)(entryDir) === "dist" ? entryDir : (0, import_node_path13.join)(entryDir, "../../dist");
+if ((0, import_node_fs13.existsSync)(dist)) {
   app.use(import_express.default.static(dist));
-  app.get("/{*path}", (_request, response) => response.sendFile((0, import_node_path11.join)(dist, "index.html")));
+  app.get("/{*path}", (_request, response) => response.sendFile((0, import_node_path13.join)(dist, "index.html")));
 }
 function listen(port) {
   const server = app.listen(port, host, () => {
     const url = `http://${host}:${port}`;
-    (0, import_node_fs11.writeFileSync)((0, import_node_path11.join)(dataDir, "runtime.json"), JSON.stringify({ pid: process.pid, port, url, startedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2));
+    (0, import_node_fs13.writeFileSync)((0, import_node_path13.join)(dataDir, "runtime.json"), JSON.stringify({ pid: process.pid, port, url, startedAt: (/* @__PURE__ */ new Date()).toISOString() }, null, 2));
     console.log(`Polychat broker listening at ${url}`);
   });
   server.on("error", (error) => {

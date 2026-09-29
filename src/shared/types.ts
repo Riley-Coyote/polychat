@@ -123,6 +123,9 @@ export interface Council {
   results: CouncilResults;
   chairAgentId: string | null;
   error: string | null;
+  // Where the finished minutes were saved: the records folder, and the project folder if asked.
+  recordPath: string | null;
+  projectRecordPath: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -165,6 +168,21 @@ export interface SessionContext {
   size: number;
   isSidechain: boolean;
   source: string | null;
+}
+
+// What a participant brings into the room: its folder, the instruction files its runtime reads there,
+// its saved memory, and the conversation it continues.
+export interface MindNote {
+  label: string;
+  path: string;
+}
+
+export interface MindContext {
+  agentId: string;
+  project: { name: string; path: string; exists: boolean } | null;
+  notes: MindNote[];
+  memory: { count: number; path: string } | null;
+  conversation: { found: boolean; title: string | null; startedAt: string | null; lastActiveAt: string | null; origin: "earlier" | "room" } | null;
 }
 
 export type ClaudeProjectContext = ProjectContext;

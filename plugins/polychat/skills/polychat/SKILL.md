@@ -30,7 +30,8 @@ For a decision or a hard question with two or more peers, prefer a council to fr
 1. After the room is set up and open, call `run_council` with the question. Pass `agentIds` only if some peers should sit out. Don't post the question separately; the council posts it.
 2. Call `wait_for_events` until the council settles. If it runs long, tell the user which round it's in.
 3. Call `read_room` and relay the minutes: the decision, where each mind landed, what moved, the dissent, and the blind ranking, including any peer that ranked its own answer first.
-4. Anyone in the room can type `stop` to end a council. `stop_council` does the same from here.
+4. Polychat saves every finished council as a Markdown record, and `read_room` gives the path. Tell the user where it is. If they want a copy inside the project, call `save_minutes_to_project`; it writes to the project's `councils` folder.
+5. Anyone in the room can type `stop` to end a council. `stop_council` does the same from here.
 
 ## Conduct the meeting
 

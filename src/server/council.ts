@@ -1,6 +1,7 @@
 import type { Agent, ChatMessage, Council, CouncilMessageRole, CouncilPhase, CouncilPosition, CouncilResults } from "../shared/types.js";
 import { createCouncil, createMessage, getAgent, getCouncil, listAgents, listCouncils, updateCouncil, updateMessage } from "./db.js";
 import { publish } from "./events.js";
+import { saveCouncilRecord } from "./records.js";
 import { cancelAgents, invokeAgent } from "./runtime.js";
 
 // A council puts one question to real, different minds in four rounds:
@@ -23,7 +24,7 @@ const ordinal = (place: number) => ["first", "second", "third", "fourth", "fifth
 const list = (names: string[]) => names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 
 export function activeCouncil(roomId: string) { return listCouncils(roomId, 5).find((council) => activePhases.has(council.phase)); }
-function publishCouncil(council: Council) { publish(council.roomId, { type: "council.updated", council }); return council; }
+export function publishCouncil(council: Council) { publish(council.roomId, { type: "council.updated", council }); return council; }
 function setPhase(id: string, phase: CouncilPhase, patch: Partial<Pick<Council, "results" | "chairAgentId" | "error">> = {}) { return publishCouncil(updateCouncil(id, { phase, ...patch })); }
 function stillRunning(id: string) { const council = getCouncil(id); return Boolean(council && activePhases.has(council.phase)); }
 
@@ -125,7 +126,7 @@ ${summary}
 CROSS-EXAMINATION
 ${responses.map((item) => `### ${who(item.agent)}\n${item.text}`).join("\n\n")}
 
-Write the minutes plainly, in Markdown, with exactly these sections:
+Write the minutes plainly, in Markdown. Begin with one line: "# " and a headline of at most eight words, in sentence case, that says what the council concluded, like "# Ship conflict copies before CRDTs". It also names the saved record, so make it specific. Then write exactly these sections:
 ## Decision
 1–3 sentences: what the council recommends, and how settled it is.
 ## Where each mind landed
@@ -190,6 +191,9 @@ async function runCouncil(id: string) {
   if (!stillRunning(id)) return;
   const written = minutes.get(chairId)?.status === "complete";
   setPhase(id, written ? "complete" : "failed", written ? {} : { error: `${nameOf(chairId)} couldn't write the minutes.` });
+  // The minutes outlive the room: every finished council is saved as a record. A record that can't
+  // be written never undoes the council itself.
+  if (written) try { publishCouncil(saveCouncilRecord(id, "records")); } catch (error) { console.error("Polychat couldn't save the council record:", error); }
 }
 
 export function startCouncil(roomId: string, input: { question: string; agentIds?: string[]; senderId?: string }) {

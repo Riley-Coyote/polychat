@@ -3,6 +3,7 @@ import type { Agent, ChatMessage, Room, RoomEvent, RoomState } from "../shared/t
 import { AddCollaborator } from "./AddCollaborator";
 import { AgentMark } from "./AgentMark";
 import { ContextPicker } from "./ContextPicker";
+import { MindCard } from "./MindCard";
 import { CouncilGlyph, CouncilOpening, MarkdownLite, Minutes, RankingBlock, councilInSession, phaseLabel } from "./Council";
 import { guidedInitialState, guidedOpusResponse, guidedTurns } from "./guidedDemo";
 import { showcaseState } from "./showcase";
@@ -156,7 +157,7 @@ export function App() {
         rankingShown.add(council.id);
         return <RankingBlock key={message.id} council={council} ballots={state.messages.filter((item) => item.metadata.councilId === council.id && item.metadata.councilRole === "ranking")} agents={state.agents} />;
       }
-      if (role === "minutes") return <Minutes key={message.id} message={message} council={council} agents={state.agents} time={time} />;
+      if (role === "minutes") return <Minutes key={message.id} message={message} council={council} agents={state.agents} room={state.room} time={time} />;
       const sealed = role === "blind" && message.metadata.sealed === true && council?.phase === "blind" && message.status !== "error";
       const badge = role === "blind" ? "Blind answer" : role === "response" ? "Cross-examination" : undefined;
       const position = role === "response" ? council?.results.positions?.[message.senderId] : undefined;
@@ -215,7 +216,7 @@ export function App() {
           </form></div>
         </main>
 
-        {settingsOpen && <aside className="context-panel"><button className="context-handle" onClick={() => setSettingsOpen(false)} aria-label="Close room context">›</button><div className="context-heading"><span className="section-label">Participant context</span><button onClick={() => setSettingsOpen(false)} aria-label="Close room context">×</button></div>{inspectedAgent ? <><div className="context-agent"><span className={`avatar ${inspectedAgent.runtime}`}><AgentMark runtime={inspectedAgent.runtime} fallback={inspectedAgent.name} /></span><div><strong>{inspectedAgent.name}</strong><small>{modelLabel(inspectedAgent)}</small></div></div><dl><div><dt>Project</dt><dd>{shortPath(inspectedAgent.cwd)}</dd></div><div><dt>Session</dt><dd>{inspectedAgent.sessionId ? `${inspectedAgent.sessionId.slice(0, 12)}…` : "New thread"}</dd></div><div><dt>Presence</dt><dd>{inspectedAgent.status}</dd></div></dl><button className="context-primary" onClick={() => setContextPickerOpen(true)}>Choose context</button><button className="context-danger" onClick={async () => { await fetch(`/api/rooms/${roomId}/participants/${inspectedAgent.id}`, { method: "DELETE" }); setSettingsOpen(false); }}>Remove from room</button></> : <div className="context-empty">Select a collaborator to inspect their working context.</div>}</aside>}
+        {settingsOpen && <aside className="context-panel"><button className="context-handle" onClick={() => setSettingsOpen(false)} aria-label="Close room context">›</button><div className="context-heading"><span className="section-label">{inspectedAgent ? `What ${inspectedAgent.name} brings` : "Participant context"}</span><button onClick={() => setSettingsOpen(false)} aria-label="Close room context">×</button></div>{inspectedAgent ? <><div className="context-agent"><span className={`avatar ${inspectedAgent.runtime}`}><AgentMark runtime={inspectedAgent.runtime} fallback={inspectedAgent.name} /></span><div><strong>{inspectedAgent.name}</strong><small>{modelLabel(inspectedAgent)}{inspectedAgent.status === "away" ? " · away" : inspectedAgent.status === "thinking" ? " · replying" : ""}</small></div></div><MindCard roomId={roomId} agent={inspectedAgent} messages={state.messages} live={!presentation} /><button className="context-primary" onClick={() => setContextPickerOpen(true)}>Choose context</button><button className="context-danger" onClick={async () => { await fetch(`/api/rooms/${roomId}/participants/${inspectedAgent.id}`, { method: "DELETE" }); setSettingsOpen(false); }}>Remove from room</button></> : <div className="context-empty">Select a collaborator to inspect their working context.</div>}</aside>}
       </div>
       {!showcase && addOpen && <AddCollaborator roomId={roomId} defaultCwd={state.room.projectCwd ?? ""} onClose={() => setAddOpen(false)} guided={guided} onCreated={(agent) => { setState((current) => ({ ...current, agents: upsert(current.agents, agent) })); setInspectedAgentId(agent.id); if (agent.model === "opus" && agent.sessionId) setRecipientId(agent.id); }} />}
       {!showcase && contextPickerOpen && inspectedAgent && <ContextPicker roomId={roomId} agent={inspectedAgent} onClose={() => setContextPickerOpen(false)} guided={guided} onSelected={(agent) => setState((current) => ({ ...current, agents: upsert(current.agents, agent) }))} />}

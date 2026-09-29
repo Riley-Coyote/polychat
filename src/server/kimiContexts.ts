@@ -47,10 +47,8 @@ export function listKimiProjects(query = ""): ProjectContext[] {
   })).filter((project) => !needle || `${project.name} ${project.cwd}`.toLowerCase().includes(needle)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
-export function listKimiSessions(projectId: string, limit = 32): SessionContext[] {
-  let cwd = "";
-  try { cwd = Buffer.from(projectId, "base64url").toString("utf8"); } catch { return []; }
-  return records().filter((record) => record.cwd === cwd).slice(0, limit).map((record) => ({
+function toSession(record: KimiRecord): SessionContext {
+  return {
     id: record.id,
     title: record.state.title?.trim().slice(0, 82) || record.state.lastPrompt?.trim().slice(0, 82) || "Untitled Kimi session",
     preview: record.state.lastPrompt?.trim().slice(0, 180) || "",
@@ -61,7 +59,14 @@ export function listKimiSessions(projectId: string, limit = 32): SessionContext[
     size: record.size,
     isSidechain: false,
     source: "Kimi Code",
-  }));
+  };
 }
 
+export function listKimiSessions(projectId: string, limit = 32): SessionContext[] {
+  let cwd = "";
+  try { cwd = Buffer.from(projectId, "base64url").toString("utf8"); } catch { return []; }
+  return records().filter((record) => record.cwd === cwd).slice(0, limit).map(toSession);
+}
+
+export function findKimiSession(sessionId: string) { const record = records().find((candidate) => candidate.id === sessionId); return record ? toSession(record) : null; }
 export function findKimiSessionCwd(sessionId: string) { return records().find((record) => record.id === sessionId)?.cwd ?? null; }

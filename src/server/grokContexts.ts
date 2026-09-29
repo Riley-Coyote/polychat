@@ -58,10 +58,8 @@ export function listGrokProjects(query = ""): ProjectContext[] {
   })).filter((project) => !needle || `${project.name} ${project.cwd}`.toLowerCase().includes(needle)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
-export function listGrokSessions(projectId: string, limit = 32): SessionContext[] {
-  let cwd = "";
-  try { cwd = Buffer.from(projectId, "base64url").toString("utf8"); } catch { return []; }
-  return records().filter((record) => record.cwd === cwd).slice(0, limit).map((record) => ({
+function toSession(record: GrokRecord): SessionContext {
+  return {
     id: record.id,
     title: record.summary.generated_title?.trim() || record.summary.session_summary?.trim().slice(0, 82) || "Untitled Grok session",
     preview: record.summary.session_summary?.trim().slice(0, 180) || "",
@@ -72,7 +70,14 @@ export function listGrokSessions(projectId: string, limit = 32): SessionContext[
     size: record.size,
     isSidechain: false,
     source: record.summary.current_model_id ?? "Grok Build",
-  }));
+  };
 }
 
+export function listGrokSessions(projectId: string, limit = 32): SessionContext[] {
+  let cwd = "";
+  try { cwd = Buffer.from(projectId, "base64url").toString("utf8"); } catch { return []; }
+  return records().filter((record) => record.cwd === cwd).slice(0, limit).map(toSession);
+}
+
+export function findGrokSession(sessionId: string) { const record = records().find((candidate) => candidate.id === sessionId); return record ? toSession(record) : null; }
 export function findGrokSessionCwd(sessionId: string) { return records().find((record) => record.id === sessionId)?.cwd ?? null; }

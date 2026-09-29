@@ -21217,7 +21217,7 @@ function councilInSession(state) {
   return (state.councils ?? []).some((council) => ["blind", "ranking", "responding", "minutes"].includes(council.phase));
 }
 var runtimeSchema = external_exports.enum(["claude-code", "codex", "grok", "kimi-code"]);
-var server = new McpServer({ name: "polychat", version: "1.1.0" });
+var server = new McpServer({ name: "polychat", version: "1.2.0" });
 server.registerTool("polychat_doctor", { title: "Check Polychat", description: "Check the local Polychat broker, host requirements, and explicitly required runtimes.", annotations: { readOnlyHint: true }, inputSchema: { requiredRuntimes: external_exports.array(runtimeSchema).default([]) } }, async ({ requiredRuntimes }) => {
   const checks = { platform: process.platform, node: process.version, nodeSupported: nodeHasSqlite(), codex: commandVersion("codex"), claude: commandVersion("claude"), browserOpen: (0, import_node_fs.existsSync)("/usr/bin/open"), dataDir, broker: await healthy(), url: baseUrl() };
   const catalog = await request("/api/runtimes?refresh=true");
@@ -21251,8 +21251,9 @@ server.registerTool("read_room", { title: "Read a Polychat room", description: "
   state.messages = state.messages.slice(-limit);
   const transcript = state.messages.map((message) => `${message.senderName}: ${message.content || `[${message.status}]`}`).join("\n\n");
   const council = state.councils?.at(-1);
+  const saved = [council?.recordPath, council?.projectRecordPath].filter(Boolean);
   const councilLine = council ? `
-Latest council: ${council.phase}${council.error ? ` (${council.error})` : ""}` : "";
+Latest council: ${council.phase}${council.error ? ` (${council.error})` : ""}${saved.length ? `. Minutes saved to ${saved.join(" and ")}` : ""}` : "";
   return result(`${state.room.name}${councilLine}
 ${transcript || "No messages yet."}`, state);
 });
@@ -21302,6 +21303,12 @@ server.registerTool("wait_for_events", { title: "Wait for room activity", descri
 server.registerTool("run_council", { title: "Run a council", description: "Put one question to the room's collaborators as a structured council: blind answers in parallel, sealed until everyone is in; a blind ranking of every answer with the authors hidden; a named cross-examination round; and minutes written by the member the blind ranking placed first. Use it for decisions and hard questions with two or more collaborators. The council posts the question itself. Then call wait_for_events until it settles, and read_room for the minutes.", inputSchema: { roomId: external_exports.string(), question: external_exports.string().min(1), agentIds: external_exports.array(external_exports.string()).optional(), senderId: external_exports.string().default(participantId) } }, async ({ roomId, ...body }) => {
   const data = await request(`/api/rooms/${roomId}/councils`, { method: "POST", body: JSON.stringify(body) });
   return result(`Council convened with ${data.council.agentIds.length} minds; the blind round is underway.`, { roomId, ...data, url: `${baseUrl()}/?room=${roomId}` });
+});
+server.registerTool("save_minutes_to_project", { title: "Save council minutes to the project", description: "Save a finished council's minutes, with its blind ranking and every answer, as a Markdown file in the project's councils folder. Polychat already keeps every finished council in its records folder; use this when the user wants a copy inside the project itself. Defaults to the room's latest finished council.", inputSchema: { roomId: external_exports.string(), councilId: external_exports.string().optional() } }, async ({ roomId, councilId }) => {
+  const id = councilId ?? (await request(`/api/rooms/${roomId}`)).councils?.filter((council2) => council2.phase === "complete").at(-1)?.id;
+  if (!id) throw new Error("This room has no finished council yet.");
+  const council = await request(`/api/rooms/${roomId}/councils/${id}/records`, { method: "POST", body: JSON.stringify({ target: "project" }) });
+  return result(`Minutes saved to ${council.projectRecordPath}.`, { roomId, council });
 });
 server.registerTool("stop_council", { title: "Stop a council", description: "End the council in session in a room, cancelling any member still answering.", inputSchema: { roomId: external_exports.string(), councilId: external_exports.string() } }, async ({ roomId, councilId }) => {
   const council = await request(`/api/rooms/${roomId}/councils/${councilId}`, { method: "DELETE" });
