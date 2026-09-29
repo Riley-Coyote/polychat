@@ -2,7 +2,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { join } from "node:path";
 
-const client = new Client({ name: "polychat-release-smoke", version: "1.2.0" });
+const client = new Client({ name: "polychat-release-smoke", version: "1.3.0" });
 const transport = new StdioClientTransport({
   command: process.execPath,
   args: [join(process.cwd(), "dist", "polychat-mcp.cjs")],

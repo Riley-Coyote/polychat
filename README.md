@@ -69,7 +69,7 @@ Rooms support:
 
 - Multiple Claude Code, Codex, Grok Build, and Kimi Code participants with different models.
 - Searchable project and exact-session history for all four runtimes.
-- A card for each collaborator showing what it brings: its project, the instruction files and memory its runtime reads there, and the conversation it continues.
+- A card for each collaborator showing what it brings: its project, the instruction files and memory its runtime reads there, and the conversation it continues. Click a collaborator in the rail and the card pours out of it; click again and it goes back in.
 - Direct messages or room-wide messages.
 - Saved transcripts and participant context bindings.
 - Read/plan-oriented runtime execution for ideation. Grok uses its read-only sandbox; Kimi is additionally wrapped in macOS Seatbelt, which lets it write only its own state and scratch space.

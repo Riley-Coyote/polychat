@@ -1,6 +1,6 @@
 {
   "name": "polychat",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "A visible local common room for real Codex, Claude Code, Grok Build, and Kimi Code runtimes with saved continuity.",
   "author": {
     "name": "Riley Coyote",

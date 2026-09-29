@@ -21217,7 +21217,7 @@ function councilInSession(state) {
   return (state.councils ?? []).some((council) => ["blind", "ranking", "responding", "minutes"].includes(council.phase));
 }
 var runtimeSchema = external_exports.enum(["claude-code", "codex", "grok", "kimi-code"]);
-var server = new McpServer({ name: "polychat", version: "1.2.0" });
+var server = new McpServer({ name: "polychat", version: "1.3.0" });
 server.registerTool("polychat_doctor", { title: "Check Polychat", description: "Check the local Polychat broker, host requirements, and explicitly required runtimes.", annotations: { readOnlyHint: true }, inputSchema: { requiredRuntimes: external_exports.array(runtimeSchema).default([]) } }, async ({ requiredRuntimes }) => {
   const checks = { platform: process.platform, node: process.version, nodeSupported: nodeHasSqlite(), codex: commandVersion("codex"), claude: commandVersion("claude"), browserOpen: (0, import_node_fs.existsSync)("/usr/bin/open"), dataDir, broker: await healthy(), url: baseUrl() };
   const catalog = await request("/api/runtimes?refresh=true");

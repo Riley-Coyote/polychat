@@ -26359,7 +26359,7 @@ function sendMessage(roomId, body) {
   }
   return { ...message, dispatchedAgentIds, dispatchErrors, queuedForMeeting: meetingInput && !stopRequested, stopRequested };
 }
-app.get("/api/health", (_request, response) => response.json({ ok: true, service: "polychat", version: "1.2.0", dataDir, registry: { ready: true, runtimes: runtimeIds } }));
+app.get("/api/health", (_request, response) => response.json({ ok: true, service: "polychat", version: "1.3.0", dataDir, registry: { ready: true, runtimes: runtimeIds } }));
 app.get("/api/runtimes", async (request, response) => {
   try {
     response.json({ runtimes: await runtimeCatalog(request.query.refresh === "true") });

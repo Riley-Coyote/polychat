@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.0
+
+### Changed
+- **What each mind brings lives with each collaborator.** Click one in the rail and its card pours out of its avatar with a genie effect, the way a macOS window leaves the Dock. Click it again, press Esc, or click anywhere else and the card is drawn back in. Opening another collaborator's card puts the first away while the new one comes out.
+- The card is a real warp, not a squash: it is cut into thin strips, and each strip is bent onto the funnel between the avatar and the card, so the text itself stretches through the neck.
+- Choose context and Remove from room are on the card. The Room context button and its side panel are gone.
+- A collaborator's card comes out as soon as it joins the room.
+- With reduced motion, and on a hidden page, the card simply appears and disappears.
+
 ## 1.2.0
 
 ### Added

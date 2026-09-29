@@ -3,7 +3,7 @@ import type { Agent, ChatMessage, Room, RoomEvent, RoomState } from "../shared/t
 import { AddCollaborator } from "./AddCollaborator";
 import { AgentMark } from "./AgentMark";
 import { ContextPicker } from "./ContextPicker";
-import { MindCard } from "./MindCard";
+import { MindChips } from "./MindChip";
 import { CouncilGlyph, CouncilOpening, MarkdownLite, Minutes, RankingBlock, councilInSession, phaseLabel } from "./Council";
 import { guidedInitialState, guidedOpusResponse, guidedTurns } from "./guidedDemo";
 import { showcaseState } from "./showcase";
@@ -27,14 +27,14 @@ export function App() {
   const [roomId, setRoomId] = useState(presentation ? seededState.room.id : new URLSearchParams(location.search).get("room") ?? "");
   const [state, setState] = useState<RoomState>(seededState);
   const [draft, setDraft] = useState("");
-  const [inspectedAgentId, setInspectedAgentId] = useState<string | null>(null);
+  // The collaborator whose card is out of the rail, and the one whose context is being chosen.
+  const [cardAgentId, setCardAgentId] = useState<string | null>(null);
+  const [pickerAgentId, setPickerAgentId] = useState<string | null>(null);
   const [recipientId, setRecipientId] = useState("all");
   const [recipientMenuOpen, setRecipientMenuOpen] = useState(false);
   const [roomMenuOpen, setRoomMenuOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [participantsExpanded, setParticipantsExpanded] = useState(() => window.innerWidth > 760);
   const [addOpen, setAddOpen] = useState(false);
-  const [contextPickerOpen, setContextPickerOpen] = useState(false);
   const [connection, setConnection] = useState<"connecting" | "live" | "offline">(presentation ? "live" : "connecting");
   const [error, setError] = useState<string | null>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
@@ -46,12 +46,14 @@ export function App() {
   }, [draft]);
   useEffect(() => {
     const dismiss = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { setRecipientMenuOpen(false); setRoomMenuOpen(false); setSettingsOpen(false); setAddOpen(false); setContextPickerOpen(false); }
+      if (event.key === "Escape") { setRecipientMenuOpen(false); setRoomMenuOpen(false); setCardAgentId(null); setAddOpen(false); setPickerAgentId(null); }
     };
     const dismissMenus = (event: PointerEvent) => {
       if (!(event.target instanceof Element)) return;
       if (!event.target.closest(".recipient-control")) setRecipientMenuOpen(false);
       if (!event.target.closest(".room-switcher")) setRoomMenuOpen(false);
+      // A click anywhere else puts the card back; a click on a collaborator's row toggles it there.
+      if (!event.target.closest(".mind-chip, .participant")) setCardAgentId(null);
     };
     document.addEventListener("keydown", dismiss);
     document.addEventListener("pointerdown", dismissMenus);
@@ -60,7 +62,7 @@ export function App() {
   const guidedStarted = useRef(false);
 
   const runtimeAgents = useMemo(() => state.agents.filter((agent) => agent.runtime !== "human" && agent.status !== "away"), [state.agents]);
-  const inspectedAgent = state.agents.find((agent) => agent.id === inspectedAgentId) ?? state.agents.find((agent) => agent.runtime !== "human");
+  const pickerAgent = state.agents.find((agent) => agent.id === pickerAgentId);
   const recipient = recipientId === "all" ? undefined : runtimeAgents.find((agent) => agent.id === recipientId);
   const councilById = useMemo(() => new Map(state.councils.map((council) => [council.id, council])), [state.councils]);
   const sessionCouncil = state.councils.find(councilInSession);
@@ -72,7 +74,7 @@ export function App() {
     if (!next.length) await createNewRoom();
   }
 
-  function selectRoom(id: string) { setRoomId(id); history.replaceState(null, "", `/?room=${encodeURIComponent(id)}`); setRoomMenuOpen(false); setRecipientId("all"); setInspectedAgentId(null); }
+  function selectRoom(id: string) { setRoomId(id); history.replaceState(null, "", `/?room=${encodeURIComponent(id)}`); setRoomMenuOpen(false); setRecipientId("all"); setCardAgentId(null); }
 
   async function createNewRoom() {
     const response = await fetch("/api/rooms", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: `Council ${new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date())}` }) });
@@ -181,13 +183,12 @@ export function App() {
             <div className="room-menu-actions"><button onClick={() => void renameRoom()}>Rename</button><button onClick={() => void archiveRoom()}>Archive</button></div>
           </div>}
         </div>
-        <button className="quiet-button" onClick={() => setSettingsOpen((open) => !open)} aria-expanded={settingsOpen} aria-label={settingsOpen ? "Close context" : "Room context"}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M15 4v16" /></svg><span>{settingsOpen ? "Close context" : "Room context"}</span></button>
       </header>
 
-      <div className={`workspace ${settingsOpen ? "with-context" : ""} ${participantsExpanded ? "participants-expanded" : "participants-collapsed"}`}>
+      <div className={`workspace ${participantsExpanded ? "participants-expanded" : "participants-collapsed"}`}>
         <aside className="participants" aria-label="Participants">
           <div className="section-label">Collaborators <span className="participant-count">{state.agents.length}</span></div>
-          <div className="participant-list">{state.agents.map((agent) => <button key={agent.id} className={`participant ${inspectedAgent?.id === agent.id ? "selected" : ""} ${agent.status === "away" ? "away" : ""}`} onClick={() => { if (agent.runtime !== "human") { setInspectedAgentId(agent.id); setSettingsOpen(true); } }} disabled={agent.runtime === "human"} aria-label={`${agent.name}, ${modelLabel(agent)}, ${agent.status}`}>
+          <div className="participant-list">{state.agents.map((agent) => <button key={agent.id} data-agent-id={agent.id} className={`participant ${cardAgentId === agent.id ? "selected" : ""} ${agent.status === "away" ? "away" : ""}`} onClick={() => { if (agent.runtime !== "human") setCardAgentId((open) => open === agent.id ? null : agent.id); }} disabled={agent.runtime === "human"} aria-expanded={agent.runtime === "human" ? undefined : cardAgentId === agent.id} aria-label={`${agent.name}, ${modelLabel(agent)}, ${agent.status}`}>
             <span className={`avatar ${agent.runtime}`}><AgentMark runtime={agent.runtime} fallback={agent.name} /></span>
             <span className="participant-copy"><strong>{agent.name}</strong><small>{modelLabel(agent)}</small></span><span className={`presence ${agent.status}`} title={agent.status} />
           </button>)}</div>
@@ -216,10 +217,13 @@ export function App() {
           </form></div>
         </main>
 
-        {settingsOpen && <aside className="context-panel"><button className="context-handle" onClick={() => setSettingsOpen(false)} aria-label="Close room context">›</button><div className="context-heading"><span className="section-label">{inspectedAgent ? `What ${inspectedAgent.name} brings` : "Participant context"}</span><button onClick={() => setSettingsOpen(false)} aria-label="Close room context">×</button></div>{inspectedAgent ? <><div className="context-agent"><span className={`avatar ${inspectedAgent.runtime}`}><AgentMark runtime={inspectedAgent.runtime} fallback={inspectedAgent.name} /></span><div><strong>{inspectedAgent.name}</strong><small>{modelLabel(inspectedAgent)}{inspectedAgent.status === "away" ? " · away" : inspectedAgent.status === "thinking" ? " · replying" : ""}</small></div></div><MindCard roomId={roomId} agent={inspectedAgent} messages={state.messages} live={!presentation} /><button className="context-primary" onClick={() => setContextPickerOpen(true)}>Choose context</button><button className="context-danger" onClick={async () => { await fetch(`/api/rooms/${roomId}/participants/${inspectedAgent.id}`, { method: "DELETE" }); setSettingsOpen(false); }}>Remove from room</button></> : <div className="context-empty">Select a collaborator to inspect their working context.</div>}</aside>}
       </div>
-      {!showcase && addOpen && <AddCollaborator roomId={roomId} defaultCwd={state.room.projectCwd ?? ""} onClose={() => setAddOpen(false)} guided={guided} onCreated={(agent) => { setState((current) => ({ ...current, agents: upsert(current.agents, agent) })); setInspectedAgentId(agent.id); if (agent.model === "opus" && agent.sessionId) setRecipientId(agent.id); }} />}
-      {!showcase && contextPickerOpen && inspectedAgent && <ContextPicker roomId={roomId} agent={inspectedAgent} onClose={() => setContextPickerOpen(false)} guided={guided} onSelected={(agent) => setState((current) => ({ ...current, agents: upsert(current.agents, agent) }))} />}
+      {!showcase && addOpen && <AddCollaborator roomId={roomId} defaultCwd={state.room.projectCwd ?? ""} onClose={() => setAddOpen(false)} guided={guided} onCreated={(agent) => { setState((current) => ({ ...current, agents: upsert(current.agents, agent) })); setCardAgentId(agent.id); if (agent.model === "opus" && agent.sessionId) setRecipientId(agent.id); }} />}
+      {!showcase && pickerAgent && <ContextPicker roomId={roomId} agent={pickerAgent} onClose={() => setPickerAgentId(null)} guided={guided} onSelected={(agent) => setState((current) => ({ ...current, agents: upsert(current.agents, agent) }))} />}
+      <MindChips roomId={roomId} agents={state.agents} openId={cardAgentId} messages={state.messages} live={!presentation} railKey={participantsExpanded ? "open" : "folded"} subtitleOf={(agent) => `${modelLabel(agent)}${agent.status === "away" ? " · away" : agent.status === "thinking" ? " · replying" : ""}`}
+        onClose={() => setCardAgentId(null)}
+        onChooseContext={(agent) => { setCardAgentId(null); if (!showcase) setPickerAgentId(agent.id); }}
+        onRemove={(agent) => { setCardAgentId(null); if (presentation) return; window.setTimeout(() => { void fetch(`/api/rooms/${roomId}/participants/${agent.id}`, { method: "DELETE" }); }, 520); }} />
     </div>
   );
 }

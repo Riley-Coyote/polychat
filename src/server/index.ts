@@ -115,7 +115,7 @@ function sendMessage(roomId: string, body: Record<string, unknown>) {
   return { ...message, dispatchedAgentIds, dispatchErrors, queuedForMeeting: meetingInput && !stopRequested, stopRequested };
 }
 
-app.get("/api/health", (_request, response) => response.json({ ok: true, service: "polychat", version: "1.2.0", dataDir, registry: { ready: true, runtimes: runtimeIds } }));
+app.get("/api/health", (_request, response) => response.json({ ok: true, service: "polychat", version: "1.3.0", dataDir, registry: { ready: true, runtimes: runtimeIds } }));
 app.get("/api/runtimes", async (request, response) => { try { response.json({ runtimes: await runtimeCatalog(request.query.refresh === "true") }); } catch (error) { response.status(500).json({ error: error instanceof Error ? error.message : String(error) }); } });
 app.get("/api/rooms", (request, response) => response.json({ rooms: listRooms(request.query.archived === "true") }));
 app.post("/api/rooms", (request, response) => { try { const name = String(request.body?.name ?? "New council").trim().slice(0, 80) || "New council"; response.status(201).json(createRoom({ name, projectCwd: typeof request.body?.projectCwd === "string" ? request.body.projectCwd : null })); } catch (error) { response.status(400).json({ error: String(error) }); } });

@@ -15,6 +15,22 @@ function day(iso: string | null) {
 const clock = (iso: string) => new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date(iso));
 function folderLabel(path: string) { const parts = path.split("/").filter(Boolean); return parts.length > 3 ? `…/${parts.slice(-3).join("/")}` : path; }
 
+// Loads what a participant brings. It becomes ready once, on the first answer or after a short
+// wait, so a card can open with its content already in place; later changes refresh it quietly.
+export function useMind(roomId: string, agent: Agent, live: boolean) {
+  const [state, setState] = useState<{ mind: MindContext | null; ready: boolean }>({ mind: null, ready: !live });
+  useEffect(() => {
+    if (!live) { setState({ mind: null, ready: true }); return; }
+    let current = true;
+    const patience = setTimeout(() => { if (current) setState((previous) => ({ ...previous, ready: true })); }, 400);
+    fetch(`/api/rooms/${roomId}/participants/${agent.id}/brings`).then((response) => response.ok ? response.json() : null)
+      .then((mind: MindContext | null) => { if (current) setState((previous) => ({ mind: mind ?? previous.mind, ready: true })); })
+      .catch(() => { if (current) setState((previous) => ({ ...previous, ready: true })); });
+    return () => { current = false; clearTimeout(patience); };
+  }, [live, roomId, agent.id, agent.cwd, agent.sessionId]);
+  return state;
+}
+
 function Conversation({ agent, mind }: { agent: Agent; mind: MindContext | null }) {
   const conversation = mind?.conversation;
   if (!agent.sessionId) return <>Starts fresh<small>No earlier conversation. It reads this room's recent messages each time it replies.</small></>;
@@ -25,14 +41,7 @@ function Conversation({ agent, mind }: { agent: Agent; mind: MindContext | null 
   return <>Continuing “{conversation.title ?? "an earlier conversation"}”{dates && <small>{dates.charAt(0).toUpperCase() + dates.slice(1)}</small>}</>;
 }
 
-export function MindCard({ roomId, agent, messages, live }: { roomId: string; agent: Agent; messages: ChatMessage[]; live: boolean }) {
-  const [mind, setMind] = useState<MindContext | null>(null);
-  useEffect(() => {
-    let current = true; setMind(null);
-    if (!live) return;
-    fetch(`/api/rooms/${roomId}/participants/${agent.id}/brings`).then((response) => response.ok ? response.json() : null).then((next: MindContext | null) => { if (current) setMind(next); }).catch(() => undefined);
-    return () => { current = false; };
-  }, [live, roomId, agent.id, agent.cwd, agent.sessionId]);
+export function MindCard({ agent, mind, messages }: { agent: Agent; mind: MindContext | null; messages: ChatMessage[] }) {
   const replies = messages.filter((message) => message.senderId === agent.id && message.status === "complete" && message.content.trim());
   const last = replies.at(-1);
   return <dl className="mind-card">

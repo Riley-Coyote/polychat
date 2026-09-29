@@ -59,7 +59,7 @@ function commandVersion(command: string) {
 function councilInSession(state: any) { return (state.councils ?? []).some((council: any) => ["blind", "ranking", "responding", "minutes"].includes(council.phase)); }
 
 const runtimeSchema = z.enum(["claude-code", "codex", "grok", "kimi-code"]);
-const server = new McpServer({ name: "polychat", version: "1.2.0" });
+const server = new McpServer({ name: "polychat", version: "1.3.0" });
 
 server.registerTool("polychat_doctor", { title: "Check Polychat", description: "Check the local Polychat broker, host requirements, and explicitly required runtimes.", annotations: { readOnlyHint: true }, inputSchema: { requiredRuntimes: z.array(runtimeSchema).default([]) } }, async ({ requiredRuntimes }) => {
   const checks = { platform: process.platform, node: process.version, nodeSupported: nodeHasSqlite(), codex: commandVersion("codex"), claude: commandVersion("claude"), browserOpen: existsSync("/usr/bin/open"), dataDir, broker: await healthy(), url: baseUrl() };
