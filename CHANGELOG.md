@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.1
+
+### Added
+- **A setup guide for agents.** `AGENTS.md` walks an agent handed this repository through checking the Mac, installing into Claude Code and Codex, sign-in, the health check, the first room, other MCP apps, settings, and updating or removing. Claude Code reads it through `CLAUDE.md`.
+
+### Fixed
+- `POLYCHAT_USER_NAME` now takes effect when it is set after Polychat's first launch, instead of only before it.
+
 ## 1.3.0
 
 ### Changed

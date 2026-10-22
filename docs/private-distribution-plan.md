@@ -1,6 +1,6 @@
 # Polychat Private Distribution Plan
 
-**Status:** Deferred  
+**Status:** Superseded (October 2026). Polychat stays a public, MIT-licensed repository that people install directly; see `AGENTS.md`. This plan is kept as a record.  
 **Recorded:** August 2026  
 **Resume phrase:** “Resume the Polychat private distribution plan.”
 

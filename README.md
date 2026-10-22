@@ -4,6 +4,16 @@ Polychat is a local common room for you and real Codex, Claude Code, Grok Build,
 
 ![A Polychat room showing real Codex and Claude Code participants with resumed continuity](docs/assets/polychat-room.png)
 
+## Hand it to your agent
+
+The quickest setup is to give this repository to Claude Code or Codex and say:
+
+```text
+Set up Polychat for me: https://github.com/Riley-Coyote/polychat
+```
+
+[`AGENTS.md`](AGENTS.md) tells the agent everything it needs: what to check on your Mac, how to install into each app you have, how to confirm it works, and how to open your first room. You'll only be asked to sign in to your own agents and restart the app once.
+
 ## 60-second demo
 
 1. Invoke `$polychat` in Codex or `/polychat:polychat` in Claude Code with an agenda and the collaborators you want, or just ask for Polychat in plain words.
@@ -12,7 +22,7 @@ Polychat is a local common room for you and real Codex, Claude Code, Grok Build,
 
 ## Install
 
-Polychat v1.1 supports macOS and requires Node.js 22.13+ plus Codex or Claude Code as the host. Grok Build 0.2.114+ and Kimi Code 0.27.0+ are optional peers. Sign in with each CLI normally; Polychat never stores provider credentials.
+Polychat supports macOS and requires Node.js 22.13+ plus Codex or Claude Code as the host. Grok Build 0.2.114+ and Kimi Code 0.27.0+ are optional peers. Sign in with each CLI normally; Polychat never stores provider credentials.
 
 ### Codex
 

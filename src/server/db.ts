@@ -186,6 +186,8 @@ function seedLegacyRoom() {
     (id, name, runtime, model, cwd, session_id, status, created_at, updated_at)
     VALUES ('riley', ?, 'human', NULL, NULL, NULL, 'available', ?, ?)`)
     .run(humanName, timestamp, timestamp);
+  // The person can set their name after the first launch, too.
+  if (process.env.POLYCHAT_USER_NAME?.trim()) db.prepare("UPDATE agents SET name = ? WHERE id = 'riley'").run(humanName);
   db.prepare("INSERT OR IGNORE INTO room_agents (room_id, agent_id) VALUES ('common-room', 'riley')").run();
 }
 seedLegacyRoom();

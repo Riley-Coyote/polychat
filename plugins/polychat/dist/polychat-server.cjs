@@ -24258,6 +24258,7 @@ function seedLegacyRoom() {
   db.prepare(`INSERT OR IGNORE INTO agents
     (id, name, runtime, model, cwd, session_id, status, created_at, updated_at)
     VALUES ('riley', ?, 'human', NULL, NULL, NULL, 'available', ?, ?)`).run(humanName, timestamp, timestamp);
+  if (process.env.POLYCHAT_USER_NAME?.trim()) db.prepare("UPDATE agents SET name = ? WHERE id = 'riley'").run(humanName);
   db.prepare("INSERT OR IGNORE INTO room_agents (room_id, agent_id) VALUES ('common-room', 'riley')").run();
 }
 seedLegacyRoom();
@@ -26359,7 +26360,7 @@ function sendMessage(roomId, body) {
   }
   return { ...message, dispatchedAgentIds, dispatchErrors, queuedForMeeting: meetingInput && !stopRequested, stopRequested };
 }
-app.get("/api/health", (_request, response) => response.json({ ok: true, service: "polychat", version: "1.3.0", dataDir, registry: { ready: true, runtimes: runtimeIds } }));
+app.get("/api/health", (_request, response) => response.json({ ok: true, service: "polychat", version: "1.3.1", dataDir, registry: { ready: true, runtimes: runtimeIds } }));
 app.get("/api/runtimes", async (request, response) => {
   try {
     response.json({ runtimes: await runtimeCatalog(request.query.refresh === "true") });
