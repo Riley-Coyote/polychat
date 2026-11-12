@@ -263,6 +263,7 @@ test("a requestId that is too long, or one asking for a discussion, is refused b
   const tooLong = "x".repeat(129);
   assert.equal((await ask(roomId, agent.id, "Hi.", tooLong)).status, 400);
   assert.equal((await ask(roomId, agent.id, "Hi.", "")).status, 400);
+  assert.equal((await call("POST", `/api/rooms/${roomId}/invoke`, { agentId: agent.id, senderId: "riley", prompt: "Hi.", requestId: 7 })).status, 400);
   assert.equal((await call("POST", `/api/rooms/${roomId}/messages`, { senderId: "riley", content: "Hi.", recipientAgentIds: [agent.id], requestId: tooLong })).status, 400);
   const discussion = await call("POST", `/api/rooms/${roomId}/messages`, { senderId: "riley", content: "Discuss.", recipientAgentIds: [agent.id], discussion: true, requestId: "talk" });
   assert.equal(discussion.status, 400);
@@ -274,6 +275,36 @@ test("a requestId that is too long, or one asking for a discussion, is refused b
   const later = await ask(roomId, agent.id, "Now with a prompt.", "later");
   assert.equal(later.status, 202);
   assert.equal(later.body.duplicate, false);
+});
+
+test("a requestId of null counts as none: a plain turn, with no outcome to read", async () => {
+  const { id: roomId } = await room("Null id");
+  const agent = await codex(roomId, "Codex", project("nullid", "reply"));
+  const plain = await call("POST", `/api/rooms/${roomId}/invoke`, { agentId: agent.id, senderId: "riley", prompt: "Hi.", requestId: null });
+  assert.equal(plain.status, 202);
+  assert.equal(plain.body.duplicate, undefined);
+  assert.equal((await call("GET", `/api/rooms/${roomId}/consults/null`)).status, 404);
+});
+
+test("when a message consult wakes one busy participant and one free one, the outcome reads busy and each reply keeps its own status", async () => {
+  const { id: roomId } = await room("Mixed");
+  const held = project("mixedheld", "hold");
+  const busyAgent = await codex(roomId, "Held", held);
+  const freeAgent = await codex(roomId, "Free", project("mixedfree", "reply"));
+  await ask(roomId, busyAgent.id, "Long one.", "mixed-long");
+  await delay(300);
+  const sent = await call("POST", `/api/rooms/${roomId}/messages`, { senderId: "riley", content: "Both of you?", recipientAgentIds: [busyAgent.id, freeAgent.id], requestId: "mixed" });
+  assert.equal(sent.status, 202);
+  assert.deepEqual(sent.body.dispatchedAgentIds, [freeAgent.id]);
+  let mixed = await outcome(roomId, "mixed");
+  for (let tries = 0; tries < 40 && mixed.status === "pending"; tries += 1) { await delay(250); mixed = await outcome(roomId, "mixed"); }
+  assert.equal(mixed.status, "busy");
+  const byAgent = Object.fromEntries(mixed.replies.map((reply: { agentId: string; status: string }) => [reply.agentId, reply.status]));
+  assert.equal(byAgent[busyAgent.id], "busy");
+  assert.equal(byAgent[freeAgent.id], "complete");
+  assert.equal(launches("mixedfree"), 1);
+  release(held);
+  await settled(roomId, "mixed-long");
 });
 
 test("a plain ask, with or without a requestId, never opens a council", async () => {
