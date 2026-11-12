@@ -143,6 +143,31 @@ export interface InvokeRequest {
   prompt: string;
   senderId?: string;
   roomId?: string;
+  // A caller's own id for this request. The same id in the same room never launches a second turn.
+  requestId?: string;
+}
+
+// A consult is one request that carries a caller's requestId. Polychat runs it once and keeps the
+// outcome under that id, so a repeated request or a repeated read changes nothing.
+export type ConsultStatus = "pending" | "complete" | "error" | "busy";
+
+export interface ConsultReply {
+  agentId: string;
+  messageId: string | null;
+  status: ConsultStatus;
+  reply: string | null;
+  error: StructuredRuntimeError | { message: string } | null;
+}
+
+export interface ConsultOutcome {
+  requestId: string;
+  status: ConsultStatus;
+  // The message the first request returned: the reply itself for an invoke, the posted message for a send.
+  messageId: string | null;
+  reply: string | null;
+  error: StructuredRuntimeError | { message: string } | null;
+  // One entry per participant the first request woke.
+  replies: ConsultReply[];
 }
 
 export interface ProjectContext {

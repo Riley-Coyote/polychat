@@ -1,0 +1,31 @@
+#!/bin/sh
+# A stand-in for the Codex CLI, for tests and the host-seam example only. Placed first on PATH as
+# "codex", it is what a throwaway Polychat broker launches. It never calls a model.
+#
+# It writes one line to $POLYCHAT_STAND_IN_LOG every time it is launched, then behaves as the file
+# "stand-in-mode" in its working folder says (the participant's folder is its working folder):
+#   reply  answer at once (the default)
+#   hold   answer once a file named "release" appears in the folder
+#   busy   refuse the way Codex does when the session is open in the Codex app
+
+mode=reply
+[ -f stand-in-mode ] && mode=$(cat stand-in-mode)
+resume=no
+[ "$2" = "resume" ] && resume=yes
+echo "launch mode=$mode resume=$resume folder=$(basename "$PWD")" >> "${POLYCHAT_STAND_IN_LOG:-/dev/null}"
+
+if [ "$mode" = "busy" ]; then
+  # Codex's own words on 2026-11-12, kept in src/server/runtimes/runtime.test.ts.
+  echo "ERROR codex_core::session: Failed to create session: thread-store conflict: thread 01a1 already has an active writer" >&2
+  echo "Error: thread/resume: thread/resume failed: thread 01a1 already has an active writer (code -32600)" >&2
+  exit 1
+fi
+
+if [ "$mode" = "hold" ]; then
+  waited=0
+  while [ ! -f release ] && [ "$waited" -lt 300 ]; do sleep 0.1; waited=$((waited + 1)); done
+fi
+
+printf '%s\n' '{"type":"thread.started","thread_id":"stand-in-thread"}'
+printf '%s\n' '{"type":"item.completed","item":{"type":"agent_message","text":"Stand-in Codex here: one reply, from one launch."}}'
+exit 0

@@ -2,12 +2,13 @@ import express from "express";
 import { execFile } from "node:child_process";
 import { existsSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
-import { createAgent, createMessage, createRoom, dataDir, getAgent, getCouncil, getRoom, listAgents, listCouncils, listMessages, listRooms, removeAgentFromRoom, updateAgent, updateRoom } from "./db.js";
+import type { ChatMessage } from "../shared/types.js";
+import { createAgent, createMessage, createRoom, dataDir, getAgent, getCouncil, getRoom, listAgents, listCouncils, listMessages, listRooms, releaseConsult, removeAgentFromRoom, reserveConsult, settleConsult, updateAgent, updateRoom, type ConsultReplyRef } from "./db.js";
 import { activeCouncil, cancelCouncil, publishCouncil, startCouncil } from "./council.js";
 import { revealCouncilRecord, saveCouncilRecord } from "./records.js";
 import { describeMind } from "./brings.js";
 import { currentCursor, publish, subscribe } from "./events.js";
-import { cancelAgents, invokeAgent } from "./runtime.js";
+import { busyDetail, cancelAgents, consultAgent, consultOutcome, invokeAgent, originalMessage, readRequestId, recordBusy, requestIdLimit } from "./runtime.js";
 import { listClaudeProjects, listClaudeSessions } from "./claudeContexts.js";
 import { isRuntimeId, getRuntimeAdapter, rankProjects, runtimeCatalog, runtimeIds } from "./runtimes/registry.js";
 import { findGrokSessionCwd } from "./grokContexts.js";
@@ -73,7 +74,10 @@ function requestedTurns(content: string, recipients: number) {
 
 const stopPhrase = /^\s*(?:stop|cancel|end)(?:\s+(?:the\s+)?(?:council|meeting|discussion))?[.!]?\s*$/i;
 
-function sendMessage(roomId: string, body: Record<string, unknown>) {
+// When a message carries a requestId, this collects which message each woken participant answers in.
+type ConsultCollector = { requestId: string; replies: ConsultReplyRef[] };
+
+function sendMessage(roomId: string, body: Record<string, unknown>, consult?: ConsultCollector) {
   const content = String(body.content ?? "").trim();
   const senderId = String(body.senderId ?? "riley");
   if (!content) throw new Error("Message content is required.");
@@ -108,11 +112,44 @@ function sendMessage(roomId: string, body: Record<string, unknown>) {
     void runDiscussion(roomId, runnable.map((agent) => agent!.id), content, sender.name, requestedTurns(content, runnable.length)).catch((error) => console.error("Polychat council failed:", error));
   } else {
     for (const agent of runnable) {
-      try { invokeAgent(roomId, agent!, content, sender.name); dispatchedAgentIds.push(agent!.id); }
-      catch (error) { dispatchErrors.push({ agentId: agent!.id, error: error instanceof Error ? error.message : String(error) }); }
+      try {
+        const invocation = consult ? invokeAgent(roomId, agent!, content, sender.name, undefined, { metadata: { requestId: consult.requestId } }) : invokeAgent(roomId, agent!, content, sender.name);
+        dispatchedAgentIds.push(agent!.id); consult?.replies.push({ agentId: agent!.id, messageId: invocation.placeholder.id });
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        dispatchErrors.push({ agentId: agent!.id, error: reason });
+        if (consult) { const busy = busyDetail(error); consult.replies.push(busy ? { agentId: agent!.id, messageId: recordBusy(roomId, agent!, busy, consult.requestId).id } : { agentId: agent!.id, messageId: null, error: reason }); }
+      }
     }
   }
   return { ...message, dispatchedAgentIds, dispatchErrors, queuedForMeeting: meetingInput && !stopRequested, stopRequested };
+}
+
+const badRequestId = `requestId must be a string of 1 to ${requestIdLimit} characters.`;
+
+// A message with a requestId is sent once. A later request with the same room and requestId posts
+// nothing, wakes no one, and returns the original message as it stands now.
+function sendConsultMessage(roomId: string, body: Record<string, unknown>, requestId: string) {
+  const existing = originalMessage(roomId, requestId);
+  if (existing) return duplicateSend(existing, requestId);
+  if (body.discussion === true) throw new Error("A requestId asks each recipient for one turn, so it can't start a discussion. Leave out requestId or discussion.");
+  if (!reserveConsult(roomId, requestId, "message")) return duplicateSend(originalMessage(roomId, requestId)!, requestId);
+  const consult: ConsultCollector = { requestId, replies: [] };
+  try {
+    const result = sendMessage(roomId, body, consult);
+    settleConsult(roomId, requestId, result.id, consult.replies);
+    return { ...result, requestId, duplicate: false };
+  } catch (error) { releaseConsult(roomId, requestId); throw error; }
+}
+
+function duplicateSend(message: ChatMessage, requestId: string) {
+  return { ...message, dispatchedAgentIds: [] as string[], dispatchErrors: [] as Array<{ agentId: string; error: string }>, queuedForMeeting: message.metadata.queuedForMeeting === true, stopRequested: message.metadata.stopRequested === true, requestId, duplicate: true };
+}
+
+function postMessage(roomId: string, body: Record<string, unknown>) {
+  const requestId = readRequestId(body.requestId);
+  if (requestId === null) throw new Error(badRequestId);
+  return requestId === undefined ? sendMessage(roomId, body) : sendConsultMessage(roomId, body, requestId);
 }
 
 app.get("/api/health", (_request, response) => response.json({ ok: true, service: "polychat", version: "1.3.1", dataDir, registry: { ready: true, runtimes: runtimeIds } }));
@@ -123,7 +160,7 @@ app.get("/api/rooms/:roomId", (request, response) => { const state = roomState(r
 app.patch("/api/rooms/:roomId", (request, response) => { try { const patch = { ...(typeof request.body?.name === "string" ? { name: request.body.name.trim().slice(0, 80) } : {}), ...(request.body?.archivedAt === null || typeof request.body?.archivedAt === "string" ? { archivedAt: request.body.archivedAt } : {}) }; const room = updateRoom(request.params.roomId, patch); publish(room.id, { type: "room.updated", room }); response.json(room); } catch (error) { response.status(404).json({ error: error instanceof Error ? error.message : String(error) }); } });
 
 app.get("/api/rooms/:roomId/events", (request, response) => { if (!getRoom(request.params.roomId)) return response.status(404).end(); response.setHeader("Content-Type", "text/event-stream"); response.setHeader("Cache-Control", "no-cache"); response.setHeader("Connection", "keep-alive"); response.flushHeaders(); const after = Number(request.query.after ?? request.headers["last-event-id"] ?? 0); subscribe(request.params.roomId, response, Number.isFinite(after) ? after : 0); request.on("close", () => response.end()); });
-app.post("/api/rooms/:roomId/messages", (request, response) => { try { const result = sendMessage(request.params.roomId, request.body ?? {}); response.status(result.dispatchedAgentIds.length ? 202 : 201).json(result); } catch (error) { response.status(400).json({ error: error instanceof Error ? error.message : String(error) }); } });
+app.post("/api/rooms/:roomId/messages", (request, response) => { try { const result = postMessage(request.params.roomId, request.body ?? {}); response.status("duplicate" in result && result.duplicate ? 200 : result.dispatchedAgentIds.length ? 202 : 201).json(result); } catch (error) { response.status(400).json({ error: error instanceof Error ? error.message : String(error) }); } });
 
 app.post("/api/rooms/:roomId/councils", (request, response) => { try { if (!getRoom(request.params.roomId)) return response.status(404).json({ error: "Room not found." }); const council = startCouncil(request.params.roomId, { question: String(request.body?.question ?? ""), agentIds: Array.isArray(request.body?.agentIds) ? request.body.agentIds.map(String) : undefined, senderId: typeof request.body?.senderId === "string" ? request.body.senderId : undefined }); response.status(202).json({ council, eventCursor: currentCursor() }); } catch (error) { response.status(409).json({ error: error instanceof Error ? error.message : String(error) }); } });
 app.delete("/api/rooms/:roomId/councils/:councilId", (request, response) => { const council = cancelCouncil(request.params.roomId, request.params.councilId); council ? response.json(council) : response.status(404).json({ error: "No council in session with that id." }); });
@@ -151,7 +188,25 @@ app.post("/api/rooms/:roomId/participants", (request, response) => {
 app.patch("/api/rooms/:roomId/participants/:agentId", (request, response) => { try { const current = senderInRoom(request.params.roomId, request.params.agentId); if (!current) return response.status(404).json({ error: "Participant not found." }); const cwd = typeof request.body?.cwd === "string" ? request.body.cwd : current.cwd; const sessionId = request.body?.sessionId === null || typeof request.body?.sessionId === "string" ? request.body.sessionId : current.sessionId; const sessionCwd = sessionId && current.runtime === "grok" ? findGrokSessionCwd(sessionId) : sessionId && current.runtime === "kimi-code" ? findKimiSessionCwd(sessionId) : null; if (cwd && sessionCwd && resolve(cwd) !== resolve(sessionCwd)) return response.status(409).json({ error: "The selected session belongs to a different project directory.", code: "session_mismatch", runtime: current.runtime }); const patch = { ...(typeof request.body?.name === "string" ? { name: request.body.name } : {}), ...(typeof request.body?.model === "string" ? { model: request.body.model } : {}), ...(typeof request.body?.cwd === "string" ? { cwd: request.body.cwd } : {}), ...(request.body?.sessionId === null || typeof request.body?.sessionId === "string" ? { sessionId: request.body.sessionId } : {}), ...(typeof request.body?.status === "string" ? { status: request.body.status } : {}) }; const agent = updateAgent(request.params.agentId, patch); publish(request.params.roomId, { type: "agent.updated", agent }); response.json(agent); } catch (error) { response.status(400).json({ error: error instanceof Error ? error.message : String(error) }); } });
 app.get("/api/rooms/:roomId/participants/:agentId/brings", (request, response) => { const agent = senderInRoom(request.params.roomId, request.params.agentId); if (!agent) return response.status(404).json({ error: "Participant not found." }); try { response.json(describeMind(agent)); } catch (error) { response.status(500).json({ error: error instanceof Error ? error.message : String(error) }); } });
 app.delete("/api/rooms/:roomId/participants/:agentId", (request, response) => { const agent = senderInRoom(request.params.roomId, request.params.agentId); if (!agent) return response.status(404).json({ error: "Participant not found." }); if (agent.runtime === "human") return response.status(400).json({ error: "A human participant cannot be removed." }); if (agent.status === "thinking") return response.status(409).json({ error: `${agent.name} is still responding.` }); removeAgentFromRoom(agent.id, request.params.roomId); publish(request.params.roomId, { type: "agent.removed", agentId: agent.id }); response.status(204).end(); });
-app.post("/api/rooms/:roomId/invoke", (request, response) => { const agent = getAgent(String(request.body?.agentId ?? "")); const sender = senderInRoom(request.params.roomId, String(request.body?.senderId ?? "riley")); const prompt = String(request.body?.prompt ?? "").trim(); if (!agent || !sender || !prompt) return response.status(400).json({ error: "A room participant, sender, and prompt are required." }); try { const invocation = invokeAgent(request.params.roomId, agent, prompt, sender.name); response.status(202).json({ message: invocation.placeholder, eventCursor: currentCursor() }); } catch (error) { response.status(409).json({ error: error instanceof Error ? error.message : String(error) }); } });
+app.post("/api/rooms/:roomId/invoke", (request, response) => {
+  const requestId = readRequestId(request.body?.requestId);
+  if (requestId === null) return response.status(400).json({ error: badRequestId });
+  if (requestId !== undefined) return invokeConsult(request.params.roomId, request.body ?? {}, requestId, response);
+  const agent = getAgent(String(request.body?.agentId ?? "")); const sender = senderInRoom(request.params.roomId, String(request.body?.senderId ?? "riley")); const prompt = String(request.body?.prompt ?? "").trim(); if (!agent || !sender || !prompt) return response.status(400).json({ error: "A room participant, sender, and prompt are required." }); try { const invocation = invokeAgent(request.params.roomId, agent, prompt, sender.name); response.status(202).json({ message: invocation.placeholder, eventCursor: currentCursor() }); } catch (error) { response.status(409).json({ error: error instanceof Error ? error.message : String(error) }); } });
+
+function invokeConsult(roomId: string, body: Record<string, unknown>, requestId: string, response: express.Response) {
+  const existing = originalMessage(roomId, requestId);
+  if (existing) return response.status(200).json({ message: existing, requestId, duplicate: true, eventCursor: currentCursor() });
+  const agent = getAgent(String(body.agentId ?? "")); const sender = senderInRoom(roomId, String(body.senderId ?? "riley")); const prompt = String(body.prompt ?? "").trim();
+  if (!agent || !sender || !prompt) return response.status(400).json({ error: "A room participant, sender, and prompt are required." });
+  try {
+    const consult = consultAgent(roomId, agent, prompt, sender.name, requestId);
+    if (consult.busy) return response.status(409).json({ error: consult.busy.message, code: consult.busy.code, retryable: consult.busy.retryable, message: consult.message, requestId, duplicate: false, eventCursor: currentCursor() });
+    response.status(consult.duplicate ? 200 : 202).json({ message: consult.message, requestId, duplicate: consult.duplicate, eventCursor: currentCursor() });
+  } catch (error) { response.status(409).json({ error: error instanceof Error ? error.message : String(error) }); }
+}
+// The outcome of a consult, read as many times as a caller likes.
+app.get("/api/rooms/:roomId/consults/:requestId", (request, response) => { const outcome = consultOutcome(request.params.roomId, request.params.requestId); outcome ? response.json(outcome) : response.status(404).json({ error: "No consult with that requestId in this room." }); });
 
 app.post("/api/rooms/:roomId/meeting", (request, response) => { try { const roomId = request.params.roomId; const host = createAgent({ roomId, runtime: request.body?.hostRuntime === "claude-code" ? "claude-code" : "codex", name: String(request.body?.hostName ?? (request.body?.hostRuntime === "claude-code" ? "Claude host" : "Codex host")), model: String(request.body?.hostModel ?? "current"), cwd: String(request.body?.cwd ?? process.cwd()), status: "available" }); const expiresAt = new Date(Date.now() + Math.min(Math.max(Number(request.body?.minutes ?? 20), 1), 20) * 60_000).toISOString(); const room = updateRoom(roomId, { meetingStatus: "live", hostAgentId: host.id, hostExpiresAt: expiresAt }); publish(roomId, { type: "agent.updated", agent: host }); publish(roomId, { type: "room.updated", room }); response.status(201).json({ room, host, eventCursor: currentCursor() }); } catch (error) { response.status(400).json({ error: error instanceof Error ? error.message : String(error) }); } });
 app.delete("/api/rooms/:roomId/meeting", (request, response) => { try { const room = getRoom(request.params.roomId); if (!room) return response.status(404).json({ error: "Room not found." }); cancelAgents(listAgents(room.id).map((agent) => agent.id)); if (room.hostAgentId) { const hostAgent = updateAgent(room.hostAgentId, { status: "away" }); publish(room.id, { type: "agent.updated", agent: hostAgent }); } const next = updateRoom(room.id, { meetingStatus: request.query.cancel === "true" ? "cancelled" : "complete", hostExpiresAt: null }); publish(room.id, { type: "room.updated", room: next }); response.json(next); } catch (error) { response.status(400).json({ error: String(error) }); } });

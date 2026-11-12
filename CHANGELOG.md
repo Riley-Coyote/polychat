@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+- **A request that lands once.** Asking a participant (`invoke_participant`, or `POST /api/rooms/:roomId/invoke`) and sending a message that wakes participants (`send_message`, or `POST /api/rooms/:roomId/messages`) can carry a `requestId` of the caller's choosing. Sending the same `requestId` to the same room again starts nothing and posts nothing; it returns the first request's message, marked `duplicate: true`. This holds across a restart of Polychat. Without a `requestId`, nothing changes.
+- **One place to read how it went.** `GET /api/rooms/:roomId/consults/:requestId` says whether the reply is pending, complete, failed or busy, with the reply or the error. Reading it changes nothing.
+- **Busy is said plainly.** When the participant can't take the turn, because its session is open somewhere else or it is already answering, the outcome is `busy` with the reason, and whether trying later could work. Polychat doesn't retry it or keep it for later.
+- **A guide for apps that host Polychat.** `docs/host-seam.md` says what such an app can borrow from Polychat, what must never run twice, which calls change the room or start a process, and who can stop a turn. `examples/host-seam/run.mjs` shows the request-once behaviour on a throwaway copy of Polychat, with a stand-in for Codex.
+
 ### Fixed
 - **A Codex session that's open somewhere else now says so.** Codex lets only one place write to a session at a time, so bringing in a session that's open in the Codex app used to show Codex's raw refusal. The room now says what happened and what to do: ask that session to post in the room itself, or add a new Codex session.
 - **Grok is no longer called signed out after one failed check.** Grok renews its sign-in as it runs, and a check that lands during a renewal can fail. Polychat now asks a second time before saying Grok needs a sign-in.

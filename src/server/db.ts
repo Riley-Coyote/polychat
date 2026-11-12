@@ -140,6 +140,16 @@ addColumn("rooms", "updated_at", "TEXT");
 db.prepare("UPDATE rooms SET updated_at = COALESCE(updated_at, created_at)").run();
 addColumn("councils", "record_path", "TEXT");
 addColumn("councils", "project_record_path", "TEXT");
+// A consult's requestId, kept so a repeated request is recognised even after a broker restart.
+db.exec(`CREATE TABLE IF NOT EXISTS consults (
+  room_id TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+  request_id TEXT NOT NULL,
+  route TEXT NOT NULL CHECK(route IN ('invoke', 'message')),
+  message_id TEXT,
+  replies TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (room_id, request_id)
+)`);
 
 function importLegacyDatabase() {
   if (!existsSync(legacyPath) || legacyPath === databasePath) return;
@@ -290,6 +300,30 @@ export function updateMessage(id: string, patch: Partial<Pick<ChatMessage, "cont
   db.prepare("UPDATE messages SET content = ?, status = ?, metadata = ?, updated_at = ? WHERE id = ?")
     .run(patch.content ?? current.content, patch.status ?? current.status, JSON.stringify(patch.metadata ?? current.metadata), now(), id);
   return getMessage(id)!;
+}
+
+// Which message each woken participant answers in. A participant that couldn't be woken at all has no message.
+export type ConsultReplyRef = { agentId: string; messageId: string | null; error?: string };
+export type ConsultRecord = { roomId: string; requestId: string; route: "invoke" | "message"; messageId: string | null; replies: ConsultReplyRef[]; createdAt: string };
+type ConsultRow = { room_id: string; request_id: string; route: ConsultRecord["route"]; message_id: string | null; replies: string; created_at: string };
+
+export function getConsult(roomId: string, requestId: string): ConsultRecord | undefined {
+  const row = db.prepare("SELECT * FROM consults WHERE room_id = ? AND request_id = ?").get(roomId, requestId) as ConsultRow | undefined;
+  return row ? { roomId: row.room_id, requestId: row.request_id, route: row.route, messageId: row.message_id, replies: JSON.parse(row.replies) as ConsultReplyRef[], createdAt: row.created_at } : undefined;
+}
+
+// Claims the (room, requestId) pair. False means another request already holds it.
+export function reserveConsult(roomId: string, requestId: string, route: ConsultRecord["route"]) {
+  return Number(db.prepare("INSERT OR IGNORE INTO consults (room_id, request_id, route, created_at) VALUES (?, ?, ?, ?)").run(roomId, requestId, route, now()).changes) > 0;
+}
+
+export function settleConsult(roomId: string, requestId: string, messageId: string, replies: ConsultReplyRef[]) {
+  db.prepare("UPDATE consults SET message_id = ?, replies = ? WHERE room_id = ? AND request_id = ?").run(messageId, JSON.stringify(replies), roomId, requestId);
+}
+
+// Gives the pair back when the first request was refused before anything happened.
+export function releaseConsult(roomId: string, requestId: string) {
+  db.prepare("DELETE FROM consults WHERE room_id = ? AND request_id = ? AND message_id IS NULL").run(roomId, requestId);
 }
 
 export function createCouncil(input: { roomId: string; question: string; agentIds: string[] }): Council {

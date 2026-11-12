@@ -1,5 +1,5 @@
-import type { Agent, ChatMessage, StructuredRuntimeError } from "../shared/types.js";
-import { createMessage, listAgents, listMessages, updateAgent, updateMessage } from "./db.js";
+import type { Agent, ChatMessage, ConsultOutcome, ConsultReply, StructuredRuntimeError } from "../shared/types.js";
+import { createMessage, getConsult, getMessage, listAgents, listMessages, releaseConsult, reserveConsult, settleConsult, updateAgent, updateMessage, type ConsultReplyRef } from "./db.js";
 import { publish } from "./events.js";
 import { PolychatRuntimeError, type RunningInvocation } from "./runtimes/contracts.js";
 import { getRuntimeAdapter, isRuntimeId } from "./runtimes/registry.js";
@@ -46,9 +46,10 @@ function runtimeFailure(agent: Agent, error: unknown): StructuredRuntimeError {
 export function invokeAgent(roomId: string, agent: Agent, directPrompt: string, senderName = "Human", timeoutMs = turnTimeoutMs, options: InvokeOptions = {}) {
   if (!isRuntimeId(agent.runtime)) throw new Error("A human participant cannot be invoked as a runtime.");
   if (!listAgents(roomId).some((member) => member.id === agent.id)) throw new Error("The participant does not belong to this room.");
-  if (activeRuns.has(agent.id)) throw new Error(`${agent.name} is already responding.`);
+  // A participant takes one turn at a time. A turn it can't take now is refused, never queued or retried.
+  if (activeRuns.has(agent.id)) throw new PolychatRuntimeError({ code: "invocation_busy", runtime: agent.runtime, message: `${agent.name} is already responding.`, retryable: true });
   const sessionKey = agent.sessionId ? `${agent.runtime}:${agent.sessionId}` : null;
-  if (sessionKey && activeSessions.has(sessionKey)) throw new Error("This runtime session is already responding in another room. Use a separate session or wait for it to finish.");
+  if (sessionKey && activeSessions.has(sessionKey)) throw new PolychatRuntimeError({ code: "invocation_busy", runtime: agent.runtime, message: "This runtime session is already responding in another room. Use a separate session or wait for it to finish.", retryable: true });
   const placeholder = createMessage({ roomId, senderId: agent.id, status: "streaming", metadata: { runtime: agent.runtime, ...options.metadata } });
   publish(roomId, { type: "message.created", message: placeholder });
   publish(roomId, { type: "agent.updated", agent: updateAgent(agent.id, { status: "thinking" }) });
@@ -99,4 +100,71 @@ export function cancelAgents(agentIds: string[]) {
     if (invocation) { void invocation.cancel("Council stopped by the user."); cancelled += 1; }
   }
   return cancelled;
+}
+
+export function busyDetail(error: unknown) {
+  return error instanceof PolychatRuntimeError && error.detail.code === "invocation_busy" ? error.detail : null;
+}
+
+// A consult that finds its participant busy still leaves one honest record in the room, and launches nothing.
+export function recordBusy(roomId: string, agent: Agent, detail: StructuredRuntimeError, requestId: string) {
+  const message = createMessage({ roomId, senderId: agent.id, status: "error", content: `Runtime error: ${detail.message}`, metadata: { runtime: agent.runtime, requestId, error: detail } });
+  publish(roomId, { type: "message.created", message });
+  return message;
+}
+
+export const requestIdLimit = 128;
+// Undefined means no requestId was sent; null means one was sent but isn't usable.
+export function readRequestId(value: unknown): string | undefined | null {
+  if (value === undefined || value === null) return undefined;
+  return typeof value === "string" && value.length >= 1 && value.length <= requestIdLimit ? value : null;
+}
+
+export type ConsultResult = { message: ChatMessage; duplicate: boolean; busy: StructuredRuntimeError | null };
+
+// Invoke one participant under a caller's requestId. The first request runs exactly like a plain
+// invoke; any later request with the same room and requestId launches nothing and returns the
+// original message as it stands now.
+export function consultAgent(roomId: string, agent: Agent, directPrompt: string, senderName: string, requestId: string): ConsultResult {
+  const existing = originalMessage(roomId, requestId);
+  if (existing) return { message: existing, duplicate: true, busy: null };
+  if (!reserveConsult(roomId, requestId, "invoke")) return { message: originalMessage(roomId, requestId)!, duplicate: true, busy: null };
+  try {
+    const invocation = invokeAgent(roomId, agent, directPrompt, senderName, turnTimeoutMs, { metadata: { requestId } });
+    settleConsult(roomId, requestId, invocation.placeholder.id, [{ agentId: agent.id, messageId: invocation.placeholder.id }]);
+    return { message: invocation.placeholder, duplicate: false, busy: null };
+  } catch (error) {
+    const busy = busyDetail(error);
+    if (!busy) { releaseConsult(roomId, requestId); throw error; }
+    const message = recordBusy(roomId, agent, busy, requestId);
+    settleConsult(roomId, requestId, message.id, [{ agentId: agent.id, messageId: message.id }]);
+    return { message, duplicate: false, busy };
+  }
+}
+
+export function originalMessage(roomId: string, requestId: string) {
+  const consult = getConsult(roomId, requestId);
+  return consult?.messageId ? getMessage(consult.messageId) : undefined;
+}
+
+function replyOutcome(ref: ConsultReplyRef): ConsultReply {
+  const message = ref.messageId ? getMessage(ref.messageId) : undefined;
+  if (!message) return { agentId: ref.agentId, messageId: ref.messageId, status: "error", reply: null, error: { message: ref.error ?? "This participant's reply is no longer in the room." } };
+  if (message.status === "streaming") return { agentId: ref.agentId, messageId: message.id, status: "pending", reply: null, error: null };
+  if (message.status === "complete") return { agentId: ref.agentId, messageId: message.id, status: "complete", reply: message.content, error: null };
+  const detail = message.metadata.error as StructuredRuntimeError | undefined;
+  return { agentId: ref.agentId, messageId: message.id, status: detail?.code === "invocation_busy" ? "busy" : "error", reply: null, error: detail ?? { message: message.content } };
+}
+
+// The one place to read how a consult went. Reading it changes nothing.
+export function consultOutcome(roomId: string, requestId: string): ConsultOutcome | null {
+  const consult = getConsult(roomId, requestId);
+  if (!consult) return null;
+  const replies = consult.replies.map(replyOutcome);
+  const status = replies.some((reply) => reply.status === "pending") ? "pending"
+    : replies.some((reply) => reply.status === "error") ? "error"
+    : replies.some((reply) => reply.status === "busy") ? "busy"
+    : consult.messageId ? "complete" : "pending";
+  const single = replies.length === 1 ? replies[0] : null;
+  return { requestId, status, messageId: consult.messageId, reply: single?.reply ?? null, error: single ? single.error : replies.find((reply) => reply.error)?.error ?? null, replies };
 }
