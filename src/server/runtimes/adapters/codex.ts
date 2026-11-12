@@ -18,6 +18,13 @@ const descriptor: RuntimeDescriptor = {
 
 function authenticated(executable: string | null) { if (!executable) return false; try { execFileSync(executable, ["login", "status"], { stdio: "ignore", timeout: 5000 }); return true; } catch { return false; } }
 
+export function codexFailure(stderr: string, code: number | null) {
+  const clean = stderr.trim();
+  // Codex lets one process write to a session at a time, so a session that's open in the Codex app can't be resumed from here.
+  if (/already has an active writer/i.test(clean)) return runtimeError("codex", "invocation_busy", "This Codex session is open somewhere else, most likely in the Codex app, and Codex lets only one place write to a session at a time. Ask that session to post in this room itself, or add a new Codex session instead.", false);
+  return runtimeError("codex", code === null ? "invocation_cancelled" : "process_failed", clean || `Codex exited with code ${code}.`, code !== null);
+}
+
 export const codexAdapter: RuntimeAdapter = {
   id: "codex", descriptor,
   async probe() { const executable = findExecutable("codex", "codex"); return basicProbe({ runtime: "codex", command: "codex", minimum: null, authReady: () => authenticated(executable), login: descriptor.loginCommand, update: descriptor.updateCommand }); },
@@ -34,7 +41,7 @@ export const codexAdapter: RuntimeAdapter = {
     let stderr = ""; let text = ""; let sessionId = agent.sessionId;
     const parser = parseJsonLines((event) => { if (event.type === "thread.started" && typeof event.thread_id === "string") { sessionId = event.thread_id; sink({ type: "session.bound", sessionId }); } if (event.type === "item.completed" && event.item?.type === "agent_message") { text = String(event.item.text ?? text); sink({ type: "response.delta", text }); } });
     child.stdout.on("data", (chunk: Buffer) => parser.push(chunk)); child.stderr.on("data", (chunk: Buffer) => { stderr += chunk; });
-    const completion = new Promise<RuntimeInvocationResult>((resolve, reject) => { child.on("error", reject); child.on("close", (code) => { parser.flush(); if (code === 0 && text) resolve({ text, sessionId, metadata: { runtime: "codex", model: agent.model, sessionId } }); else reject(runtimeError("codex", code === null ? "invocation_cancelled" : "process_failed", stderr.trim() || `Codex exited with code ${code}.`, code !== null)); }); });
+    const completion = new Promise<RuntimeInvocationResult>((resolve, reject) => { child.on("error", reject); child.on("close", (code) => { parser.flush(); if (code === 0 && text) resolve({ text, sessionId, metadata: { runtime: "codex", model: agent.model, sessionId } }); else reject(codexFailure(stderr, code)); }); });
     return supervise("codex", child, completion, sink, timeoutMs);
   },
 };

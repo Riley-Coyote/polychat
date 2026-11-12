@@ -50,9 +50,20 @@ function grokFailure(stderr: string, code: number | null) {
   return runtimeError("grok", code === null ? "invocation_cancelled" : "process_failed", internal ?? clean.trim().split("\n").filter(Boolean).at(-1) ?? `Grok Build exited with code ${code}.`, code !== null);
 }
 
+// One failed check isn't proof of being signed out: Grok renews its sign-in as it runs, and a check that lands
+// during a renewal can fail. So ask a second time before saying so.
+export function grokSignedIn(executable: string, authFile = join(homedir(), ".grok", "auth.json"), attempts = 2) {
+  if (!existsSync(authFile)) return false;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const result = spawnSync(executable, ["models"], { encoding: "utf8", timeout: 15_000 });
+    if (result.status === 0 && !/not authenticated|token expired|re-authentication required/i.test(`${result.stdout}\n${result.stderr}`)) return true;
+  }
+  return false;
+}
+
 export const grokAdapter: RuntimeAdapter = {
   id: "grok", descriptor,
-  async probe() { const executable = findExecutable("grok", "grok"); const authReady = () => { if (!executable || !existsSync(join(homedir(), ".grok", "auth.json"))) return false; const result = spawnSync(executable, ["models"], { encoding: "utf8", timeout: 15_000 }); return result.status === 0 && !/not authenticated|token expired|re-authentication required/i.test(`${result.stdout}\n${result.stderr}`); }; return basicProbe({ runtime: "grok", command: "grok", minimum: descriptor.minimumVersion, authReady, login: descriptor.loginCommand, update: descriptor.updateCommand }); },
+  async probe() { const executable = findExecutable("grok", "grok"); const authReady = () => (executable ? grokSignedIn(executable) : false); return basicProbe({ runtime: "grok", command: "grok", minimum: descriptor.minimumVersion, authReady, login: descriptor.loginCommand, update: descriptor.updateCommand }); },
   async discoverModels() { const executable = findExecutable("grok", "grok"); return executable ? [...presets, ...discoveredModels(executable).filter((option) => !presets.some((preset) => preset.id === option.id))] : presets; },
   async searchProjects(query, limit = 80) { return listGrokProjects(query).slice(0, limit); },
   async listSessions(projectId, limit = 40) { return listGrokSessions(projectId, limit); },

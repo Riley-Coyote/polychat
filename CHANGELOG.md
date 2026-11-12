@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- **A Codex session that's open somewhere else now says so.** Codex lets only one place write to a session at a time, so bringing in a session that's open in the Codex app used to show Codex's raw refusal. The room now says what happened and what to do: ask that session to post in the room itself, or add a new Codex session.
+- **Grok is no longer called signed out after one failed check.** Grok renews its sign-in as it runs, and a check that lands during a renewal can fail. Polychat now asks a second time before saying Grok needs a sign-in.
+
 ## 1.3.1
 
 ### Added

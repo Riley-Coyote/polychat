@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import { versionAtLeast, versionNumber } from "./transports/process.js";
 import { readOnlyProfile } from "./transports/seatbelt.js";
-import { eventText as grokEventText } from "./adapters/grok.js";
+import { codexFailure } from "./adapters/codex.js";
+import { eventText as grokEventText, grokSignedIn } from "./adapters/grok.js";
 import { appendSegment } from "./adapters/helpers.js";
 import { getRuntimeAdapter, isRuntimeId, rankProjects, runtimeIds } from "./registry.js";
 
@@ -50,4 +54,32 @@ test("a reply that resumes after a tool call starts a new paragraph", () => {
   assert.equal(appendSegment("I'll read the README.", "Lantern is a notes app.", true), "I'll read the README.\n\nLantern is a notes app.");
   assert.equal(appendSegment("Lantern is", " a notes app.", false), "Lantern is a notes app.");
   assert.equal(appendSegment("", "First words.", true), "First words.");
+});
+
+test("a Codex session that is open elsewhere is reported plainly, and other failures keep Codex's own words", () => {
+  const busy = codexFailure("ERROR codex_core::session: Failed to create session: thread-store conflict: thread 01a1 already has an active writer\nError: thread/resume: thread/resume failed: thread 01a1 already has an active writer (code -32600)", 1);
+  assert.equal(busy.detail.code, "invocation_busy");
+  assert.equal(busy.detail.retryable, false);
+  assert.match(busy.detail.message, /open somewhere else/);
+  assert.doesNotMatch(busy.detail.message, /thread-store|-32600/);
+  const other = codexFailure("  model not found  ", 1);
+  assert.equal(other.detail.code, "process_failed");
+  assert.equal(other.detail.message, "model not found");
+  assert.equal(other.detail.retryable, true);
+  assert.equal(codexFailure("", null).detail.code, "invocation_cancelled");
+});
+
+test("one failed Grok check is not taken as signed out, but two are", () => {
+  const dir = mkdtempSync(join(tmpdir(), "polychat-grok-"));
+  try {
+    const authFile = join(dir, "auth.json"); writeFileSync(authFile, "{}");
+    const fake = (name: string, body: string) => { const path = join(dir, name); writeFileSync(path, `#!/bin/sh\n${body}\n`); chmodSync(path, 0o755); return path; };
+    const calls = join(dir, "calls");
+    const renewing = fake("renewing", `echo x >> "${calls}"\nif [ "$(wc -l < "${calls}")" -lt 2 ]; then echo "token expired" >&2; exit 1; fi\necho "You are logged in with grok.com."`);
+    assert.equal(grokSignedIn(renewing, authFile), true);
+    assert.equal(grokSignedIn(fake("signed-out", `echo "not authenticated" >&2; exit 1`), authFile), false);
+    assert.equal(grokSignedIn(fake("quiet-refusal", `echo "Re-authentication required"`), authFile), false);
+    assert.equal(grokSignedIn(fake("fine", `echo "You are logged in with grok.com."`), authFile), true);
+    assert.equal(grokSignedIn(fake("never-asked", `exit 0`), join(dir, "missing.json")), false);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });
